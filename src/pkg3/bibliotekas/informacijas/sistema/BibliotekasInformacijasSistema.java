@@ -1,20 +1,20 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
- */
 package pkg3.bibliotekas.informacijas.sistema;
 
-/**
- *
- * @author Ilja.Anisimovs
- */
-public class BibliotekasInformacijasSistema {
+import java.sql.*;
+import pkg3.bibliotekas.informacijas.sistema.db.DatabaseManager;
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        // TODO code application logic here
+/** Palaiž inicializāciju un JDBC savienojuma pārbaudi */
+public class BibliotekasInformacijasSistema {
+    public static void main(String[] args) throws SQLException {
+        try (Connection c = DatabaseManager.getConnection()) {
+            DatabaseManager.initialize(c);
+            if (!DatabaseManager.testConnection(c)) throw new SQLException("JDBC pārbaude neizdevās");
+            System.out.println("JDBC savienojums ar Derby darbojas");
+            System.out.println("Datubāzes inicializācija pabeigta");
+            System.out.println("Derby versija: " + c.getMetaData().getDatabaseProductVersion());
+            try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("SELECT COUNT(*) FROM gramata")) {
+                rs.next(); System.out.println("Grāmatu skaits: " + rs.getInt(1));
+            }
+        }
     }
-    
 }
