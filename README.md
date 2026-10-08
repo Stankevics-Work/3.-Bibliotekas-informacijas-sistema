@@ -1,4 +1,4 @@
-# 3.-Bibliotekas-informacijas-sistema
+# 3.-Bibliotekas-informacijas-sistema - A. Stankevičs (StankevicsWork) un I. Aņismovs (streightlesson-spec)
 
 Esošais NetBeans Java with Ant projekts papildināts atbilstoši dokumenta modeļiem un DAO
 Projekta nosaukums, Ant struktūra, galvenā klase un Java 21 iestatījumi saglabāti
