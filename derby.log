@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Thu Oct 08 18:49:04 EEST 2026:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-01a1-1c34-2d3a-00000f3e54c0 
+on database directory C:\Users\stank\Downloads\3.-Bibliotekas-informacijas-sistema_PR-31-main\lib_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@105be200 
+Loaded from file:/C:/Users/stank/Downloads/3.-Bibliotekas-informacijas-sistema_PR-31-main/lib/derby.jar
+java.vendor=Eclipse Adoptium
+java.runtime.version=25.0.1+8-LTS
+user.dir=C:\Users\stank\Downloads\3.-Bibliotekas-informacijas-sistema_PR-31-main
+os.name=Windows 11
+os.arch=amd64
+os.version=10.0
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
