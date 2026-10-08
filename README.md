@@ -1,82 +1,43 @@
-# 3.-Bibliotekas-informacijas-sistema - A. Stankevičs (StankevicsWork) un I. Aņismovs (streightlesson-spec)
-
-Esošais NetBeans Java with Ant projekts papildināts atbilstoši dokumenta modeļiem un DAO
-Projekta nosaukums, Ant struktūra, galvenā klase un Java 21 iestatījumi saglabāti
+# LibInfo - bibliotēkas menedžmenta sistēma
 
 ## Palaišana
 
-1. Izpako arhīvu jaunā mapē
-2. NetBeans izvēlies File → Open Project un atver 3.-Bibliotekas-informacijas-sistema
-3. Properties → Libraries → Java Platform izvēlies JDK 21 vai jaunāku
-4. Izpildi Clean and Build, pēc tam Run Project
-5. Konsolē parādās JDBC savienojuma pārbaude un inicializācijas rezultāts
-6. Test Project palaiž četrus JUnit4 integrācijas testus
+1. Izpako arhīvu.
+2. NetBeans izvēlies **File → Open Project** un atver projektu `3.-Bibliotekas-informacijas-sistema`.
+3. Properties → Libraries → Java Platform izvēlies JDK 21 vai jaunāku.
+4. Izpildi **Clean and Build**, pēc tam **Run Project**.
+5. Pirmajā palaišanas reizē programma automātiski izveido Derby datubāzi **`lib_db`** projekta mapē, izveido visu shēmu, ievieto sākotnējos projekta datus un uzreiz atver pieteikšanās logu.
+6. Nākamajās palaišanas reizēs tā pati `lib_db` datubāze tiek izmantota, un dati netiek dzēsti.
 
-Bibliotēkas atrodas lib mapē un ir piesaistītas ar relatīviem ceļiem
-Nav vajadzīgs Maven vai atsevišķa Derby servera palaišana
-Ja projektā redzi platformas kļūdu, izvēlies instalēto JDK projekta Properties → Libraries sadaļā
-Windows alternatīva: run.bat un test.bat, vajadzīgs JDK 21 un javac PATH mainīgajā
+Nav vajadzīgs Maven vai atsevišķs Derby serveris. Derby strādā iegultā (embedded) režīmā no `lib/derby.jar`.
 
-## Klases
+## Datu bāze
 
-Pamatpakotne: pkg3.bibliotekas.informacijas.sistema
+Projektā ir paredzēta **viena vienīga DB mape — `lib_db`**. `data/LibInfo` nav nepieciešama un projektā vairs netiek izmantota.
 
-- BibliotekasInformacijasSistema — esošā galvenā klase ar inicializācijas un JDBC pārbaudes izsaukumiem
-- db.DatabaseManager — savienojums, shēmas inicializācija un JDBC pārbaude
-- model.Lietotajs, Gramata, Eksemplars, Izsniegums, Rezervacija un Loma
-- dao.LietotajsDAO, GramataDAO, EksemplarsDAO, IzsniegumsDAO un RezervacijaDAO
-- util.PasswordUtil — BCrypt
-- src/schema.sql — piecas tabulas, skati un trigeri
-- test — JUnit4 integrācijas testi
+Pirmās palaišanas laikā tiek automātiski izveidotas piecas tabulas, skati un trigeri no `src/schema.sql`, pēc tam tiek sagatavoti visi iepriekš pārnestie dati:
 
-Modeļu lauki un objektu saites atbilst dokumentam
-Grāmatu pieejamību automātiski atjaunina trigeri
-DAO nodrošina pievienošanu, meklēšanu pēc ID, sarakstus, rediģēšanu un dzēšanu
-Papildus ir grāmatu meklēšana un filtrēšana, aktīvie un kavētie izsniegumi un rezervāciju rinda
+- 4 lietotāji;
+- 2 grāmatas;
+- 2 eksemplāri;
+- 1 izsniegums;
+- 1 rezervācija.
 
-## Datubāze
+Tiek saglabāti arī savstarpējie ierakstu sasaistes dati un sākotnējie datumi. Sākotnējo datu ievietošana ir idempotenta — ieraksti netiek dublēti.
 
-Darba datubāze automātiski izveidojas data/LibInfo mapē
-Esošās lib_db un sample datubāzes saglabātas oriģinālajā formā un netiek mainītas
-lib_db pieprasa autentifikāciju, tās piekļuves dati arhīvā nav norādīti
-Tāpēc šīs versijas noklusējuma palaišana izmanto jauno data/LibInfo datubāzi
-Atkārtota inicializācija nedzēš datus
-Ceļu var mainīt ar JVM parametru -Dlibinfo.db.path=C:/LibInfo/data
-Esošu shēmu automātiska migrācija nav paredzēta
+### Noklusējuma administrators
 
-## DAO piemērs
+**Lietotājvārds:** `admin`  
+**Parole:** `admin123`
 
-```java
-try (Connection c = DatabaseManager.getConnection()) {
-    DatabaseManager.initialize(c);
-    GramataDAO dao = new GramataDAO(c);
-    List<Gramata> gramatas = dao.search("Java");
-}
-```
+Administratora parole tiek nodrošināta ar BCrypt jaucējvērtību. Pārējie pārnestie lietotāji saglabā savus oriģinālos paroles jaucējumus.
 
-Importi: java.sql.Connection, java.util.List, pkg3.bibliotekas.informacijas.sistema.db.DatabaseManager, pkg3.bibliotekas.informacijas.sistema.dao.GramataDAO un pkg3.bibliotekas.informacijas.sistema.model.Gramata
-Izsaucējs aizver savienojumu, katram darba pavedienam vajadzīgs savs savienojums
-No Swing izmanto SwingWorker, lai datubāzes darbības neapturētu logu
+### Svarīgi
 
-insert atgriež jauno ID, findById atgriež null, ja ieraksts nav atrasts
-update un delete atgriež true, ja mainīta viena rinda
-IzsniegumsDAO.insert un RezervacijaDAO.insert pārvalda savu SERIALIZABLE transakciju un sagaida autoCommit=true
-Izsniegšana pārbauda eksemplāra pieejamību un rezervāciju rindu
-IzsniegumsDAO.atgriezt(id) saglabā atgriešanas datumu un atbrīvo eksemplāru
-IzsniegumsDAO.update maina tikai termiņu, EksemplarsDAO.update maina tikai bibliotēku
-RezervacijaDAO.update atceļ aktīvu rezervāciju, izpildi reģistrē izsniegšanas metode
-Neatgrieztus izsniegumus un aktīvas rezervācijas dzēst nevar
-Ārējās atslēgas aizsargā saistītos datus
-LietotajsDAO sagaida BCrypt jaucējvērtību, to ģenerē PasswordUtil.hash(parole)
-Darbinieku tiesības, pieteikšanās sesijas un Swing logi vēl jārealizē servisa un GUI slānī
+NetBeans projekta atvēršana pati par sevi Java kodu neizpilda; automātiska DB izveide notiek pie **Run Project**. `lib_db` mape ZIP arhīvā ir tikai kā DB atrašanās vieta; Derby pati izveido tajā savus failus pirmajā palaišanā.
 
-## Pārbaude
+## GUI arhitektūra
 
-Pielāgotā projekta klases kompilētas un palaistas ar OpenJDK 17 Java 8 saderības režīmā
-JDBC savienojums un četri JUnit4 integrācijas testi pārbaudīti ar īstu Derby 10.14.2.0
-Oriģinālais NetBeans Java 21 iestatījums saglabāts, NetBeans interfeisa un Ant būvēšana šajā vidē nav pārbaudīta
+Saglabāts prasītais izkārtojums: **1 `JFrame` (`LibInfoSaskarne`) + 11 `JDialog` logi**.
 
-Testi pārbauda CRUD, BCrypt, datu saglabāšanu pēc Derby restartēšanas, izdoto eksemplāru aizsardzību, atgriešanu, rezervāciju rindu, kavējumus un datu ierobežojumus
-
-Git vēsture saglabāta, attālinātais repozitorijs nav mainīts
-Arhīvā nav vecās build/dist izvades vai cita datora nbproject/private iestatījumu
+Navigācija: `Login → Main → apakšlogi`, aizverot apakšlogu atgriežas `Main`. Esošais NetBeans dizains un komponentu izkārtojums nav pārbūvēts no jauna.
