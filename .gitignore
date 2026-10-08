@@ -6,4 +6,5 @@
 *.log
 .env
 
-/data/
+/lib_db/*
+!/lib_db/README.txt
