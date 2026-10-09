@@ -9,3 +9,4 @@
 /lib_db/*
 !/lib_db/README.txt
 derby.log
+derby.log 

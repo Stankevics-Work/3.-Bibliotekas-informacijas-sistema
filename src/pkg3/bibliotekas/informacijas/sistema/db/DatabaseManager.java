@@ -25,11 +25,36 @@ public final class DatabaseManager {
     private DatabaseManager() { }
 
     /**
+     * Atgriež mapi, kurā atrodas pati programma (JAR fails vai build/classes mape).
+     * Nodrošina, ka lib_db vienmēr tiek meklēta/veidota blakus programmai, nevis atkarībā
+     * no tā, no kuras mapes programma tiek palaista (darba direktorijas).
+     */
+    private static Path getApplicationDirectory() {
+        try {
+            Path location = Paths.get(DatabaseManager.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            if (Files.isRegularFile(location)) {
+                // Palaists no JAR faila -> izmanto JAR faila mapi
+                return location.getParent();
+            }
+            // Palaists no .class failiem (piem., NetBeans build/classes) -> izmanto šo mapi
+            return location;
+        } catch (Exception ex) {
+            // Fallback: ja nevar noteikt, izmanto darba direktoriju
+            return Paths.get(".").toAbsolutePath();
+        }
+    }
+
+    /**
      * Atver vienīgo projekta Derby datubāzi lib_db mapē.
      * Ja mape vai DB vēl neeksistē, Derby tās automātiski izveido.
+     * Datubāze vienmēr tiek meklēta blakus programmai, tāpēc tā ceļo līdzi projektam.
      */
     public static Connection getConnection() throws SQLException {
-        Path path = Paths.get(System.getProperty("libinfo.db.path", DB_PATH)).toAbsolutePath();
+        String override = System.getProperty("libinfo.db.path");
+        Path path = (override != null && !override.isBlank())
+                ? Paths.get(override).toAbsolutePath()
+                : getApplicationDirectory().resolve(DB_PATH).toAbsolutePath();
         try {
             Files.createDirectories(path.getParent());
             removeZipPlaceholderIfNeeded(path);
