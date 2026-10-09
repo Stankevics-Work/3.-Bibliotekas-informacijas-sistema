@@ -77,53 +77,53 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
     private void configureDialogs() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        LoginFrame.setTitle("LibInfo - Pieteikšanās");
-        RegisterFrame.setTitle("LibInfo - Reģistrācija");
-        MainFrame.setTitle("LibInfo - Galvenais logs");
-        BookListFrame.setTitle("LibInfo - Grāmatu saraksts");
-        BookEditFrame.setTitle("LibInfo - Grāmata");
-        UserListFrameTrue.setTitle("LibInfo - Lietotāju saraksts");
-        UserEditFrame.setTitle("LibInfo - Lietotājs");
-        LoanFrame.setTitle("LibInfo - Izsniegšana");
-        ReturnFrame.setTitle("LibInfo - Atgriešana");
-        ReservationFrame.setTitle("LibInfo - Rezervācijas");
-        NotificationFrame.setTitle("LibInfo - Paziņojumi");
-        LoginFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
-        RegisterFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); } });
-        MainFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
-        BookListFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListFrame); } });
-        BookEditFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToBookList(); } });
-        UserListFrameTrue.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameTrue); } });
-        UserEditFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToUserList(); } });
-        LoanFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanFrame); } });
-        ReturnFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnFrame); } });
-        ReservationFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationFrame); } });
-        NotificationFrame.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationFrame); } });
+        LoginDialog.setTitle("LibInfo - Pieteikšanās");
+        RegisterDialog.setTitle("LibInfo - Reģistrācija");
+        MainDialog.setTitle("LibInfo - Galvenais logs");
+        BookListDialog.setTitle("LibInfo - Grāmatu saraksts");
+        BookEditDialog.setTitle("LibInfo - Grāmata");
+        UserListFrameDialog.setTitle("LibInfo - Lietotāju saraksts");
+        UserEditDialog.setTitle("LibInfo - Lietotājs");
+        LoanDialog.setTitle("LibInfo - Izsniegšana");
+        ReturnDialog.setTitle("LibInfo - Atgriešana");
+        ReservationDialog.setTitle("LibInfo - Rezervācijas");
+        NotificationDialog.setTitle("LibInfo - Paziņojumi");
+        LoginDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
+        RegisterDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); } });
+        MainDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
+        BookListDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListDialog); } });
+        BookEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToBookList(); } });
+        UserListFrameDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameDialog); } });
+        UserEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToUserList(); } });
+        LoanDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanDialog); } });
+        ReturnDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnDialog); } });
+        ReservationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationDialog); } });
+        NotificationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); } });
         for (JDialog d : allDialogs()) {
             d.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
             d.setModal(false);
         }
         // The generated layout defines the visual proportions; pack first, then apply the documented sizes.
         for (JDialog d : allDialogs()) d.pack();
-        LoginFrame.setSize(420, 320);
-        RegisterFrame.setSize(420, 320);
-        MainFrame.setSize(470, 220);
-        BookListFrame.setSize(900, 600);
-        BookEditFrame.setSize(500, 600);
-        UserListFrameTrue.setSize(900, 600);
-        UserEditFrame.setSize(450, 450);
-        LoanFrame.setSize(500, 350);
-        ReturnFrame.setSize(600, 400);
-        ReservationFrame.setSize(800, 500);
-        NotificationFrame.setSize(700, 450);
+        LoginDialog.setSize(420, 320);
+        RegisterDialog.setSize(420, 320);
+        MainDialog.setSize(470, 220);
+        BookListDialog.setSize(900, 600);
+        BookEditDialog.setSize(500, 600);
+        UserListFrameDialog.setSize(900, 600);
+        UserEditDialog.setSize(450, 450);
+        LoanDialog.setSize(500, 350);
+        ReturnDialog.setSize(600, 400);
+        ReservationDialog.setSize(800, 500);
+        NotificationDialog.setSize(700, 450);
     }
 
     private List<JDialog> allDialogs() {
         List<JDialog> result = new ArrayList<>();
-        result.add(LoginFrame); result.add(RegisterFrame); result.add(MainFrame);
-        result.add(BookListFrame); result.add(BookEditFrame); result.add(UserListFrameTrue);
-        result.add(UserEditFrame); result.add(LoanFrame); result.add(ReturnFrame);
-        result.add(ReservationFrame); result.add(NotificationFrame);
+        result.add(LoginDialog); result.add(RegisterDialog); result.add(MainDialog);
+        result.add(BookListDialog); result.add(BookEditDialog); result.add(UserListFrameDialog);
+        result.add(UserEditDialog); result.add(LoanDialog); result.add(ReturnDialog);
+        result.add(ReservationDialog); result.add(NotificationDialog);
         return result;
     }
 
@@ -140,13 +140,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
     private void showLogin() {
         clearRegisterFields();
-        showDialog(LoginFrame);
+        showDialog(LoginDialog);
         jTextField3.requestFocusInWindow();
     }
 
     private void showMain() {
         updateMainRoleAccess();
-        showDialog(MainFrame);
+        showDialog(MainDialog);
     }
 
     private void returnToMain(JDialog source) {
@@ -194,7 +194,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jMenu6.add(notifications);
 
         javax.swing.JMenuItem about = new javax.swing.JMenuItem("Par programmu");
-        about.addActionListener(e -> JOptionPane.showMessageDialog(MainFrame,
+        about.addActionListener(e -> JOptionPane.showMessageDialog(MainDialog,
                 "LibInfo - bibliotēkas menedžmenta sistēma\nJava Swing + Apache Derby",
                 "Par programmu", JOptionPane.INFORMATION_MESSAGE));
         jMenu7.add(about);
@@ -221,7 +221,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton34.addActionListener(e -> editSelectedBook());
         jButton35.addActionListener(e -> loadBooksFromUi());
         jButton36.addActionListener(e -> deleteSelectedBook());
-        jButton38.addActionListener(e -> returnToMain(BookListFrame));
+        jButton38.addActionListener(e -> returnToMain(BookListDialog));
         jButton22.addActionListener(e -> saveBook());
         jButton23.addActionListener(e -> returnToBookList());
         jButton24.addActionListener(e -> importBookByIsbn());
@@ -235,16 +235,16 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton39.addActionListener(e -> saveUser());
 
         jButton16.addActionListener(e -> issueBook());
-        jButton17.addActionListener(e -> returnToMain(LoanFrame));
+        jButton17.addActionListener(e -> returnToMain(LoanDialog));
         jButton18.addActionListener(e -> returnSelectedBook());
-        jButton19.addActionListener(e -> returnToMain(ReturnFrame));
+        jButton19.addActionListener(e -> returnToMain(ReturnDialog));
 
         jButton25.addActionListener(e -> createReservation());
         jButton26.addActionListener(e -> cancelSelectedReservation());
-        jButton27.addActionListener(e -> returnToMain(ReservationFrame));
+        jButton27.addActionListener(e -> returnToMain(ReservationDialog));
         jButton28.addActionListener(e -> completeSelectedReservation());
         jButton20.addActionListener(e -> markNotificationRead());
-        jButton21.addActionListener(e -> returnToMain(NotificationFrame));
+        jButton21.addActionListener(e -> returnToMain(NotificationDialog));
     }
 
     private boolean isStaff() { return currentUser != null && (currentUser.getLoma() == Loma.ADMIN || currentUser.getLoma() == Loma.LIBRARIAN); }
@@ -263,12 +263,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton12.setEnabled(staff || reader);
         jButton3.setEnabled(true);
         // Menus remain available visually, but action methods enforce the same permissions.
-        MainFrame.setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
+        MainDialog.setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
     }
 
     private void showError(Throwable ex) {
         String message = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-        JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor(MainFrame), message,
+        JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor(MainDialog), message,
                 "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
     }
 
@@ -300,8 +300,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
     private void openRegister() {
         clearRegisterFields();
-        LoginFrame.setVisible(false);
-        showDialog(RegisterFrame);
+        LoginDialog.setVisible(false);
+        showDialog(RegisterDialog);
         jTextField5.requestFocusInWindow();
     }
 
@@ -330,7 +330,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 user.setParole(PasswordUtil.hash(password)); user.setEpasts(email); user.setLoma(Loma.READER);
                 dao.insert(user); return user;
             });
-            JOptionPane.showMessageDialog(RegisterFrame, "Reģistrācija veiksmīga. Tagad varat pieteikties.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(RegisterDialog, "Reģistrācija veiksmīga. Tagad varat pieteikties.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             showLogin();
             jTextField4.setText(username); jTextField3.setText(password);
         } catch (Exception ex) { showError(ex); }
@@ -339,8 +339,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void openBookList() {
         if (currentUser == null) return;
         if (isReader() || currentUser.getLoma() == Loma.AUTHOR || isStaff()) {
-            BookListFrame.setVisible(false);
-            showDialog(BookListFrame);
+            BookListDialog.setVisible(false);
+            showDialog(BookListDialog);
             loadBooksFromUi();
         } else return;
     }
@@ -390,9 +390,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void openNewBook() {
         if (!isStaff()) { showError(new SecurityException("Grāmatu pievienošana ir pieejama bibliotekāram vai administratoram.")); return; }
         editingBookId = -1; clearBookFields();
-        BookEditFrame.setTitle("LibInfo - Pievienot grāmatu");
-        BookListFrame.setVisible(false);
-        showDialog(BookEditFrame);
+        BookEditDialog.setTitle("LibInfo - Pievienot grāmatu");
+        BookListDialog.setVisible(false);
+        showDialog(BookEditDialog);
     }
 
     private void editSelectedBook() {
@@ -404,8 +404,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             Gramata book = db(c -> new GramataDAO(c).findById(id));
             if (book == null) throw new SQLException("Grāmata nav atrasta.");
             editingBookId = id; fillBookFields(book);
-            BookEditFrame.setTitle("LibInfo - Rediģēt grāmatu");
-            BookListFrame.setVisible(false); showDialog(BookEditFrame);
+            BookEditDialog.setTitle("LibInfo - Rediģēt grāmatu");
+            BookListDialog.setVisible(false); showDialog(BookEditDialog);
         } catch (Exception ex) { showError(ex); }
     }
 
@@ -434,7 +434,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 }
                 return null;
             });
-            JOptionPane.showMessageDialog(BookEditFrame, "Grāmatas dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(BookEditDialog, "Grāmatas dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             returnToBookList();
         } catch (Exception ex) { showError(ex); }
     }
@@ -443,7 +443,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         if (!isStaff()) return;
         int row=jTable5.getSelectedRow(); if(row<0){showError(new IllegalArgumentException("Izvēlieties grāmatu tabulā."));return;}
         int id=((Number)jTable5.getValueAt(row,0)).intValue();
-        int ok=JOptionPane.showConfirmDialog(BookListFrame,"Dzēst izvēlēto grāmatu?","Apstiprināt",JOptionPane.YES_NO_OPTION);
+        int ok=JOptionPane.showConfirmDialog(BookListDialog,"Dzēst izvēlēto grāmatu?","Apstiprināt",JOptionPane.YES_NO_OPTION);
         if(ok!=JOptionPane.YES_OPTION)return;
         try {
             boolean deleted=db(c->new GramataDAO(c).delete(id));
@@ -463,8 +463,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             if(title!=null) jTextField17.setText(title); if(description!=null) jTextArea1.setText(description); if(categories!=null) jTextField18.setText(categories); if(author!=null) jTextField16.setText(author);
             if(published!=null && published.length()>=4) try{jSpinner1.setValue(Integer.parseInt(published.substring(0,4)));}catch(NumberFormatException ignored){}
             if(title==null) throw new SQLException("Google Books neatrada grāmatu pēc šī ISBN.");
-            JOptionPane.showMessageDialog(BookEditFrame,"Dati aizpildīti no Google Books API.","LibInfo",JOptionPane.INFORMATION_MESSAGE);
-        } catch(Exception ex){JOptionPane.showMessageDialog(BookEditFrame,"ISBN imports neizdevās: "+ex.getMessage(),"LibInfo",JOptionPane.WARNING_MESSAGE);}
+            JOptionPane.showMessageDialog(BookEditDialog,"Dati aizpildīti no Google Books API.","LibInfo",JOptionPane.INFORMATION_MESSAGE);
+        } catch(Exception ex){JOptionPane.showMessageDialog(BookEditDialog,"ISBN imports neizdevās: "+ex.getMessage(),"LibInfo",JOptionPane.WARNING_MESSAGE);}
     }
 
     private String jsonValue(String json,String key){
@@ -476,7 +476,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
     private void openUserList() {
         if (!isStaff()) { showError(new SecurityException("Lietotāju pārvaldība ir pieejama tikai darbiniekiem.")); return; }
-        showDialog(UserListFrameTrue); loadUsersFromUi();
+        showDialog(UserListFrameDialog); loadUsersFromUi();
     }
     private void loadUsersFromUi(){
         try{
@@ -488,11 +488,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
     private void openNewUser(){
         if(!isStaff()){showError(new SecurityException("Lietotāja izveide ir pieejama tikai darbiniekiem."));return;}
-        editingUserId=-1; pendingEditPassword=null; clearUserFields(); UserEditFrame.setTitle("LibInfo - Pievienot lietotāju"); showDialog(UserEditFrame);
+        editingUserId=-1; pendingEditPassword=null; clearUserFields(); UserEditDialog.setTitle("LibInfo - Pievienot lietotāju"); showDialog(UserEditDialog);
     }
     private void editSelectedUser(){
         if(!isStaff())return; int row=jTable4.getSelectedRow(); if(row<0){showError(new IllegalArgumentException("Izvēlieties lietotāju tabulā."));return;}
-        int id=((Number)jTable4.getValueAt(row,0)).intValue(); try{Lietotajs u=db(c->new LietotajsDAO(c).findById(id)); if(u==null)throw new SQLException("Lietotājs nav atrasts."); editingUserId=id; pendingEditPassword=u.getParole(); fillUserFields(u); showDialog(UserEditFrame);}catch(Exception ex){showError(ex);}
+        int id=((Number)jTable4.getValueAt(row,0)).intValue(); try{Lietotajs u=db(c->new LietotajsDAO(c).findById(id)); if(u==null)throw new SQLException("Lietotājs nav atrasts."); editingUserId=id; pendingEditPassword=u.getParole(); fillUserFields(u); showDialog(UserEditDialog);}catch(Exception ex){showError(ex);}
     }
     private void saveUser(){
         if(!isStaff())return; String v=jTextField12.getText().trim(), uz=jTextField11.getText().trim(), un=jTextField14.getText().trim(), pw=jTextField13.getText(), em=jTextField15.getText().trim();
@@ -501,21 +501,21 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         try{ db(c->{LietotajsDAO dao=new LietotajsDAO(c); Lietotajs u=editingUserId<0?new Lietotajs():dao.findById(editingUserId); if(u==null)throw new SQLException("Lietotājs nav atrasts.");
             u.setVards(v);u.setUzvards(uz);u.setLietotajvards(un);u.setEpasts(em);u.setLoma(Loma.valueOf(String.valueOf(jComboBox1.getSelectedItem())));
             String hash=pw.isBlank()?pendingEditPassword:PasswordUtil.hash(pw); if(hash==null)throw new SQLException("Parole ir obligāta."); u.setParole(hash); if(editingUserId<0)dao.insert(u); else dao.update(u); return null; });
-            JOptionPane.showMessageDialog(UserEditFrame,"Lietotāja dati saglabāti.","LibInfo",JOptionPane.INFORMATION_MESSAGE); returnToUserList();
+            JOptionPane.showMessageDialog(UserEditDialog,"Lietotāja dati saglabāti.","LibInfo",JOptionPane.INFORMATION_MESSAGE); returnToUserList();
         }catch(Exception ex){showError(ex);}
     }
     private void deleteSelectedUser(){
         if(!isAdmin()){showError(new SecurityException("Lietotājus dzēst drīkst tikai administrators."));return;} int row=jTable4.getSelectedRow(); if(row<0){showError(new IllegalArgumentException("Izvēlieties lietotāju tabulā."));return;} int id=((Number)jTable4.getValueAt(row,0)).intValue();
-        if(currentUser!=null&&id==currentUser.getLietotajaId()){showError(new IllegalArgumentException("Pašreizējo lietotāju dzēst nevar."));return;} if(JOptionPane.showConfirmDialog(UserListFrameTrue,"Dzēst izvēlēto lietotāju?","Apstiprināt",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;
+        if(currentUser!=null&&id==currentUser.getLietotajaId()){showError(new IllegalArgumentException("Pašreizējo lietotāju dzēst nevar."));return;} if(JOptionPane.showConfirmDialog(UserListFrameDialog,"Dzēst izvēlēto lietotāju?","Apstiprināt",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;
         try{if(!db(c->new LietotajsDAO(c).delete(id)))throw new SQLException("Lietotāju nevar dzēst.");loadUsersFromUi();}catch(Exception ex){showError(ex);}
     }
     private void changeSelectedRole(){
         if(!isAdmin()){showError(new SecurityException("Lomas mainīt drīkst tikai administrators."));return;} int row=jTable4.getSelectedRow(); if(row<0){showError(new IllegalArgumentException("Izvēlieties lietotāju tabulā."));return;} int id=((Number)jTable4.getValueAt(row,0)).intValue();
-        javax.swing.JComboBox<Loma> combo=new javax.swing.JComboBox<>(Loma.values()); if(JOptionPane.showConfirmDialog(UserListFrameTrue,combo,"Izvēlieties jauno lomu",JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION){try{db(c->{Lietotajs u=new LietotajsDAO(c).findById(id); if(u==null)throw new SQLException("Lietotājs nav atrasts."); u.setLoma((Loma)combo.getSelectedItem()); new LietotajsDAO(c).update(u); return null;});loadUsersFromUi();}catch(Exception ex){showError(ex);}}
+        javax.swing.JComboBox<Loma> combo=new javax.swing.JComboBox<>(Loma.values()); if(JOptionPane.showConfirmDialog(UserListFrameDialog,combo,"Izvēlieties jauno lomu",JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION){try{db(c->{Lietotajs u=new LietotajsDAO(c).findById(id); if(u==null)throw new SQLException("Lietotājs nav atrasts."); u.setLoma((Loma)combo.getSelectedItem()); new LietotajsDAO(c).update(u); return null;});loadUsersFromUi();}catch(Exception ex){showError(ex);}}
     }
 
     private void openLoan(){
-        if(!isStaff()){showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators."));return;} showDialog(LoanFrame);
+        if(!isStaff()){showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators."));return;} showDialog(LoanDialog);
         try{
             loanReaders.clear(); loanCopies.clear(); loanReaders.addAll(db(c->new LietotajsDAO(c).findAll())); loanReaders.removeIf(u->u.getLoma()!=Loma.READER);
             List<Gramata> books=db(c->new GramataDAO(c).findAll());
@@ -528,13 +528,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void issueBook(){
         if(!isStaff())return; int ri=jComboBox3.getSelectedIndex(), ci=jComboBox2.getSelectedIndex(); if(ri<0||ci<0){showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));return;}
         LocalDate due=parseDueDate(String.valueOf(jFormattedTextField1.getValue())); if(due==null)return;
-        try{Lietotajs u=loanReaders.get(ri);Eksemplars copy=loanCopies.get(ci);Izsniegums loan=new Izsniegums();loan.setLietotajs(u);loan.setEksemplars(copy);loan.setTermins(Timestamp.valueOf(due.atTime(23,59,59)));db(c->{new IzsniegumsDAO(c).insert(loan);return null;});JOptionPane.showMessageDialog(LoanFrame,"Grāmata izsniegta.","LibInfo",JOptionPane.INFORMATION_MESSAGE);returnToMain(LoanFrame);}catch(Exception ex){showError(ex);}
+        try{Lietotajs u=loanReaders.get(ri);Eksemplars copy=loanCopies.get(ci);Izsniegums loan=new Izsniegums();loan.setLietotajs(u);loan.setEksemplars(copy);loan.setTermins(Timestamp.valueOf(due.atTime(23,59,59)));db(c->{new IzsniegumsDAO(c).insert(loan);return null;});JOptionPane.showMessageDialog(LoanDialog,"Grāmata izsniegta.","LibInfo",JOptionPane.INFORMATION_MESSAGE);returnToMain(LoanDialog);}catch(Exception ex){showError(ex);}
     }
     private LocalDate parseDueDate(String value){try{return LocalDate.parse(value,DATE_FORMAT);}catch(DateTimeParseException ex){showError(new IllegalArgumentException("Termiņam jābūt formātā GGGG-MM-DD."));return null;}}
 
     private void openReturn(){openReturn(false);}
     private void openReturn(boolean overdueOnly){
-        if(!isStaff()){showError(new SecurityException("Grāmatu atgriešanu drīkst veikt darbinieks."));return;} showDialog(ReturnFrame); try{
+        if(!isStaff()){showError(new SecurityException("Grāmatu atgriešanu drīkst veikt darbinieks."));return;} showDialog(ReturnDialog); try{
             List<Izsniegums> loans=db(c->overdueOnly?new IzsniegumsDAO(c).findOverdue():new IzsniegumsDAO(c).findActive()); DefaultTableModel model=(DefaultTableModel)jTable1.getModel();model.setRowCount(0);
             for(Izsniegums l:loans)model.addRow(new Object[]{l.getIzsniegumaId(),l.getLietotajs(),l.getEksemplars()==null?"":l.getEksemplars().getGramata().getNosaukums(),l.getIzsniegts(),l.getTermins()});
             jLabel19.setText(overdueOnly?"Kavētie izsniegumi":"Aktīvie izsniegumi");
@@ -545,7 +545,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     private void openReservations(){
-        if(!(isStaff()||isReader())){showError(new SecurityException("Rezervācijas nav pieejamas šai lomai."));return;} showDialog(ReservationFrame); try{
+        if(!(isStaff()||isReader())){showError(new SecurityException("Rezervācijas nav pieejamas šai lomai."));return;} showDialog(ReservationDialog); try{
             List<Rezervacija> reservations=db(c->new RezervacijaDAO(c).findAll()); if(isReader())reservations.removeIf(r->r.getLietotajs()==null||r.getLietotajs().getLietotajaId()!=currentUser.getLietotajaId());
             DefaultTableModel model=(DefaultTableModel)jTable3.getModel();model.setRowCount(0);for(Rezervacija r:reservations)model.addRow(new Object[]{r.getRezervacijasId(),r.getLietotajs(),r.getGramata()==null?"":r.getGramata().getNosaukums(),r.getDatums(),r.getStatuss()});
             jButton25.setEnabled(isReader()); jButton26.setEnabled(isReader()); jButton28.setEnabled(isStaff());
@@ -554,8 +554,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void createReservation(){
         if(!isReader()){showError(new SecurityException("Rezervāciju var izveidot tikai lasītājs."));return;}
         try{reservationBooks.clear();reservationBooks.addAll(db(c->new GramataDAO(c).findAll())); if(reservationBooks.isEmpty()){showError(new SQLException("Datubāzē nav grāmatu."));return;}
-            String[] names=reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);int selected=JOptionPane.showOptionDialog(ReservationFrame,"Izvēlieties grāmatu rezervācijai:","Jauna rezervācija",JOptionPane.DEFAULT_OPTION,JOptionPane.QUESTION_MESSAGE,null,names,names[0]);if(selected<0)return;
-            Gramata b=reservationBooks.get(selected);Rezervacija r=new Rezervacija();r.setLietotajs(currentUser);r.setGramata(b);db(c->{new RezervacijaDAO(c).insert(r);return null;});JOptionPane.showMessageDialog(ReservationFrame,"Rezervācija izveidota.","LibInfo",JOptionPane.INFORMATION_MESSAGE);openReservations();
+            String[] names=reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);int selected=JOptionPane.showOptionDialog(ReservationDialog,"Izvēlieties grāmatu rezervācijai:","Jauna rezervācija",JOptionPane.DEFAULT_OPTION,JOptionPane.QUESTION_MESSAGE,null,names,names[0]);if(selected<0)return;
+            Gramata b=reservationBooks.get(selected);Rezervacija r=new Rezervacija();r.setLietotajs(currentUser);r.setGramata(b);db(c->{new RezervacijaDAO(c).insert(r);return null;});JOptionPane.showMessageDialog(ReservationDialog,"Rezervācija izveidota.","LibInfo",JOptionPane.INFORMATION_MESSAGE);openReservations();
         }catch(Exception ex){showError(ex);}
     }
     private void cancelSelectedReservation(){
@@ -592,7 +592,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     private void openNotifications(){
-        if(currentUser==null)return; showDialog(NotificationFrame); try{
+        if(currentUser==null)return; showDialog(NotificationDialog); try{
             List<Izsniegums> overdue=db(c->{List<Izsniegums> list=new IzsniegumsDAO(c).findOverdue(); if(isReader())list.removeIf(l->l.getLietotajs()==null||l.getLietotajs().getLietotajaId()!=currentUser.getLietotajaId()); return list;});
             List<Rezervacija> activeRes=db(c->{List<Rezervacija> list=new RezervacijaDAO(c).findActive(); if(isReader())list.removeIf(r->r.getLietotajs()==null||r.getLietotajs().getLietotajaId()!=currentUser.getLietotajaId()); return list;});
             DefaultTableModel model=(DefaultTableModel)jTable2.getModel();model.setRowCount(0);int n=1;
@@ -603,7 +603,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void markNotificationRead(){int row=jTable2.getSelectedRow();if(row<0){showError(new IllegalArgumentException("Izvēlieties paziņojumu."));return;}int id=((Number)jTable2.getValueAt(row,0)).intValue();String type=String.valueOf(jTable2.getValueAt(row,1));String key=type.equals("Kavējums")?"loan:"+id:"reservation:"+(id-100000);readNotificationKeys.add(key);openNotifications();}
 
     private void exitApplication(){
-        if(JOptionPane.showConfirmDialog(MainFrame,"Vai tiešām iziet no LibInfo?","Iziet",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;
+        if(JOptionPane.showConfirmDialog(MainDialog,"Vai tiešām iziet no LibInfo?","Iziet",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;
         hideAllDialogs(); dispose(); System.exit(0);
     }
 
@@ -612,9 +612,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void fillBookFields(Gramata b){jTextField17.setText(nvl(b.getNosaukums()));jTextField16.setText(nvl(b.getAutors()));jTextField19.setText(nvl(b.getIsbn()));jTextField18.setText(nvl(b.getKategorija()));jSpinner1.setValue(b.getIzdosanasGads()==null?2026:b.getIzdosanasGads());jTextArea1.setText(nvl(b.getApraksts()));jCheckBox1.setSelected(b.isPieejama());}
     private void clearUserFields(){jTextField12.setText("");jTextField11.setText("");jTextField14.setText("");jTextField13.setText("");jTextField15.setText("");jComboBox1.setSelectedItem("READER");}
     private void fillUserFields(Lietotajs u){jTextField12.setText(nvl(u.getVards()));jTextField11.setText(nvl(u.getUzvards()));jTextField14.setText(nvl(u.getLietotajvards()));jTextField13.setText("");jTextField15.setText(nvl(u.getEpasts()));jComboBox1.setSelectedItem(u.getLoma()==null?"READER":u.getLoma().name());}
-    private void returnToBookList(){BookEditFrame.setVisible(false);clearBookFields();showDialog(BookListFrame);loadBooksFromUi();}
-    private void returnToUserList(){UserEditFrame.setVisible(false);clearUserFields();showDialog(UserListFrameTrue);loadUsersFromUi();}
-    private void clearDialogFields(JDialog d){if(d==BookListFrame)jTextField20.setText("");if(d==UserListFrameTrue)jTextField2.setText("");}
+    private void returnToBookList(){BookEditDialog.setVisible(false);clearBookFields();showDialog(BookListDialog);loadBooksFromUi();}
+    private void returnToUserList(){UserEditDialog.setVisible(false);clearUserFields();showDialog(UserListFrameDialog);loadUsersFromUi();}
+    private void clearDialogFields(JDialog d){if(d==BookListDialog)jTextField20.setText("");if(d==UserListFrameDialog)jTextField2.setText("");}
     private static String nvl(String value){return value==null?"":value;}
 
     /**
@@ -634,7 +634,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        LoginFrame = new javax.swing.JDialog(this, false);
+        LoginDialog = new javax.swing.JDialog();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
@@ -643,7 +643,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton4 = new javax.swing.JButton();
         jButton5 = new javax.swing.JButton();
         jButton6 = new javax.swing.JButton();
-        RegisterFrame = new javax.swing.JDialog(this, false);
+        RegisterDialog = new javax.swing.JDialog();
         jLabel7 = new javax.swing.JLabel();
         jLabel8 = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
@@ -659,7 +659,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jTextField10 = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
-        MainFrame = new javax.swing.JDialog(this, false);
+        MainDialog = new javax.swing.JDialog();
         jButton3 = new javax.swing.JButton();
         jButton7 = new javax.swing.JButton();
         jButton8 = new javax.swing.JButton();
@@ -676,7 +676,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jMenu5 = new javax.swing.JMenu();
         jMenu6 = new javax.swing.JMenu();
         jMenu7 = new javax.swing.JMenu();
-        BookListFrame = new javax.swing.JDialog(this, false);
+        BookListDialog = new javax.swing.JDialog();
         jScrollPane6 = new javax.swing.JScrollPane();
         jTable5 = new javax.swing.JTable();
         jButton33 = new javax.swing.JButton();
@@ -687,7 +687,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jLabel31 = new javax.swing.JLabel();
         jComboBox4 = new javax.swing.JComboBox<>();
         jButton38 = new javax.swing.JButton();
-        BookEditFrame = new javax.swing.JDialog(this, false);
+        BookEditDialog = new javax.swing.JDialog();
         jLabel23 = new javax.swing.JLabel();
         jButton22 = new javax.swing.JButton();
         jLabel24 = new javax.swing.JLabel();
@@ -706,7 +706,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jTextArea1 = new javax.swing.JTextArea();
         jLabel30 = new javax.swing.JLabel();
         jCheckBox1 = new javax.swing.JCheckBox();
-        UserListFrameTrue = new javax.swing.JDialog(this, false);
+        UserListFrameDialog = new javax.swing.JDialog();
         jScrollPane5 = new javax.swing.JScrollPane();
         jTable4 = new javax.swing.JTable();
         jButton29 = new javax.swing.JButton();
@@ -715,7 +715,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jTextField2 = new javax.swing.JTextField();
         jButton31 = new javax.swing.JButton();
         jButton32 = new javax.swing.JButton();
-        UserEditFrame = new javax.swing.JDialog(this, false);
+        jButton40 = new javax.swing.JButton();
+        UserEditDialog = new javax.swing.JDialog();
         jLabel14 = new javax.swing.JLabel();
         jButton15 = new javax.swing.JButton();
         jLabel16 = new javax.swing.JLabel();
@@ -730,7 +731,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jLabel21 = new javax.swing.JLabel();
         jComboBox1 = new javax.swing.JComboBox<>();
         jButton39 = new javax.swing.JButton();
-        LoanFrame = new javax.swing.JDialog(this, false);
+        LoanDialog = new javax.swing.JDialog();
         jLabel1 = new javax.swing.JLabel();
         jComboBox2 = new javax.swing.JComboBox<>();
         jLabel2 = new javax.swing.JLabel();
@@ -741,13 +742,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jFormattedTextField1 = new javax.swing.JFormattedTextField();
         jButton16 = new javax.swing.JButton();
         jButton17 = new javax.swing.JButton();
-        ReturnFrame = new javax.swing.JDialog(this, false);
+        ReturnDialog = new javax.swing.JDialog();
         jLabel19 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jButton18 = new javax.swing.JButton();
         jButton19 = new javax.swing.JButton();
-        ReservationFrame = new javax.swing.JDialog(this, false);
+        ReservationDialog = new javax.swing.JDialog();
         jLabel28 = new javax.swing.JLabel();
         jScrollPane4 = new javax.swing.JScrollPane();
         jTable3 = new javax.swing.JTable();
@@ -755,16 +756,15 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton26 = new javax.swing.JButton();
         jButton27 = new javax.swing.JButton();
         jButton28 = new javax.swing.JButton();
-        NotificationFrame = new javax.swing.JDialog(this, false);
+        NotificationDialog = new javax.swing.JDialog();
         jLabel22 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTable2 = new javax.swing.JTable();
         jButton20 = new javax.swing.JButton();
         jButton21 = new javax.swing.JButton();
 
-        LoginFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        LoginFrame.setPreferredSize(new java.awt.Dimension(420, 320));
-        LoginFrame.setResizable(false);
+        LoginDialog.setPreferredSize(new java.awt.Dimension(420, 320));
+        LoginDialog.setResizable(false);
 
         jLabel4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel4.setText("Lietotājvārds:");
@@ -799,14 +799,14 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout LoginFrameLayout = new javax.swing.GroupLayout(LoginFrame.getContentPane());
-        LoginFrame.getContentPane().setLayout(LoginFrameLayout);
-        LoginFrameLayout.setHorizontalGroup(
-            LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout LoginDialogLayout = new javax.swing.GroupLayout(LoginDialog.getContentPane());
+        LoginDialog.getContentPane().setLayout(LoginDialogLayout);
+        LoginDialogLayout.setHorizontalGroup(
+            LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
                 .addContainerGap(49, Short.MAX_VALUE)
-                .addGroup(LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginFrameLayout.createSequentialGroup()
+                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -814,47 +814,45 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton6)
                         .addGap(73, 73, 73))
-                    .addGroup(LoginFrameLayout.createSequentialGroup()
+                    .addGroup(LoginDialogLayout.createSequentialGroup()
                         .addGap(8, 8, 8)
-                        .addGroup(LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel5)
-                            .addGroup(LoginFrameLayout.createSequentialGroup()
+                            .addGroup(LoginDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(43, 43, 43))))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginFrameLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
                 .addGap(110, 110, 110)
                 .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
-        LoginFrameLayout.setVerticalGroup(
-            LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoginFrameLayout.createSequentialGroup()
+        LoginDialogLayout.setVerticalGroup(
+            LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(LoginDialogLayout.createSequentialGroup()
                 .addGap(56, 56, 56)
                 .addComponent(jLabel5)
                 .addGap(18, 18, 18)
-                .addGroup(LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addGroup(LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(58, 58, 58)
-                .addGroup(LoginFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(52, Short.MAX_VALUE))
         );
 
-        RegisterFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        RegisterFrame.setSize(new java.awt.Dimension(420, 320));
-        RegisterFrame.setPreferredSize(new java.awt.Dimension(420, 320));
-        RegisterFrame.setResizable(false);
+        RegisterDialog.setPreferredSize(new java.awt.Dimension(420, 320));
+        RegisterDialog.setResizable(false);
 
         jLabel7.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel7.setText("Vārds:");
@@ -893,90 +891,89 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout RegisterFrameLayout = new javax.swing.GroupLayout(RegisterFrame.getContentPane());
-        RegisterFrame.getContentPane().setLayout(RegisterFrameLayout);
-        RegisterFrameLayout.setHorizontalGroup(
-            RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(RegisterFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout RegisterDialogLayout = new javax.swing.GroupLayout(RegisterDialog.getContentPane());
+        RegisterDialog.getContentPane().setLayout(RegisterDialogLayout);
+        RegisterDialogLayout.setHorizontalGroup(
+            RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(RegisterDialogLayout.createSequentialGroup()
                 .addContainerGap(70, Short.MAX_VALUE)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterFrameLayout.createSequentialGroup()
-                        .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
+                        .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterFrameLayout.createSequentialGroup()
+                                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
                                         .addComponent(jLabel9)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(jTextField5))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterFrameLayout.createSequentialGroup()
+                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
                                         .addComponent(jLabel7)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                         .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addGroup(RegisterFrameLayout.createSequentialGroup()
+                                .addGroup(RegisterDialogLayout.createSequentialGroup()
                                     .addComponent(jLabel10)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                     .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(RegisterFrameLayout.createSequentialGroup()
+                                .addGroup(RegisterDialogLayout.createSequentialGroup()
                                     .addComponent(jLabel11)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                     .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(RegisterFrameLayout.createSequentialGroup()
+                                .addGroup(RegisterDialogLayout.createSequentialGroup()
                                     .addComponent(jLabel12)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                     .addComponent(jTextField10, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(RegisterFrameLayout.createSequentialGroup()
+                            .addGroup(RegisterDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel13)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(25, 25, 25)))
                         .addGap(51, 51, 51))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterFrameLayout.createSequentialGroup()
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
                         .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(117, 117, 117))))
         );
-        RegisterFrameLayout.setVerticalGroup(
-            RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(RegisterFrameLayout.createSequentialGroup()
+        RegisterDialogLayout.setVerticalGroup(
+            RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(RegisterDialogLayout.createSequentialGroup()
                 .addGap(41, 41, 41)
                 .addComponent(jLabel8)
                 .addGap(18, 18, 18)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel7)
                     .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel9)
                     .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel10)
                     .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel11)
                     .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel12)
                     .addComponent(jTextField10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel13))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                .addGroup(RegisterFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
-        MainFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        MainFrame.setPreferredSize(new java.awt.Dimension(470, 220));
-        MainFrame.setResizable(false);
-        MainFrame.setSize(new java.awt.Dimension(470, 220));
+        MainDialog.setPreferredSize(new java.awt.Dimension(470, 220));
+        MainDialog.setResizable(false);
+        MainDialog.setSize(new java.awt.Dimension(470, 220));
 
         jButton3.setBackground(new java.awt.Color(204, 204, 204));
         jButton3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -1036,63 +1033,60 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jMenu7.setText("Palīdzība");
         jMenuBar1.add(jMenu7);
 
-        MainFrame.setJMenuBar(jMenuBar1);
+        MainDialog.setJMenuBar(jMenuBar1);
 
-        javax.swing.GroupLayout MainFrameLayout = new javax.swing.GroupLayout(MainFrame.getContentPane());
-        MainFrame.getContentPane().setLayout(MainFrameLayout);
-        MainFrameLayout.setHorizontalGroup(
-            MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout MainDialogLayout = new javax.swing.GroupLayout(MainDialog.getContentPane());
+        MainDialog.getContentPane().setLayout(MainDialogLayout);
+        MainDialogLayout.setHorizontalGroup(
+            MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(MainDialogLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainFrameLayout.createSequentialGroup()
+                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(MainDialogLayout.createSequentialGroup()
                         .addComponent(jButton8)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton7))
-                    .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainFrameLayout.createSequentialGroup()
+                    .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainDialogLayout.createSequentialGroup()
                             .addComponent(jButton11)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                             .addComponent(jButton10))
-                        .addGroup(MainFrameLayout.createSequentialGroup()
-                            .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(MainDialogLayout.createSequentialGroup()
+                            .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addComponent(jButton12)
                                 .addComponent(jButton3))
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addComponent(jButton13)
                                 .addComponent(jButton9)))))
                 .addContainerGap(174, Short.MAX_VALUE))
         );
-        MainFrameLayout.setVerticalGroup(
-            MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainFrameLayout.createSequentialGroup()
+        MainDialogLayout.setVerticalGroup(
+            MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(MainDialogLayout.createSequentialGroup()
                 .addGap(18, 18, 18)
-                .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton7)
                     .addComponent(jButton8))
                 .addGap(18, 18, 18)
-                .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton10)
                     .addComponent(jButton11))
                 .addGap(18, 18, 18)
-                .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton9)
                     .addComponent(jButton12))
                 .addGap(18, 18, 18)
-                .addGroup(MainFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton3)
                     .addComponent(jButton13))
                 .addContainerGap(17, Short.MAX_VALUE))
         );
 
-        BookListFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        BookListFrame.setPreferredSize(new java.awt.Dimension(900, 600));
-        BookListFrame.setResizable(false);
-        BookListFrame.setSize(new java.awt.Dimension(900, 600));
+        BookListDialog.setResizable(false);
+        BookListDialog.setSize(new java.awt.Dimension(900, 600));
 
         jTable5.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jTable5.setForeground(new java.awt.Color(204, 204, 204));
         jTable5.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null, null, null, null},
@@ -1113,7 +1107,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton33.setText("Pievienot");
 
         jButton34.setBackground(new java.awt.Color(204, 204, 204));
-        jButton34.setText("Rediģēt");
+        jButton34.setText("Rēdiģēt");
         jButton34.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton34ActionPerformed(evt);
@@ -1135,20 +1129,20 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jLabel31.setText("Filtrs:");
 
         jComboBox4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jComboBox4.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Nosaukums", "Autors", "ISBN", "Kategorija" }));
+        jComboBox4.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         jButton38.setBackground(new java.awt.Color(204, 204, 204));
-        jButton38.setText("Aizvērt");
+        jButton38.setText("Aizvért");
 
-        javax.swing.GroupLayout BookListFrameLayout = new javax.swing.GroupLayout(BookListFrame.getContentPane());
-        BookListFrame.getContentPane().setLayout(BookListFrameLayout);
-        BookListFrameLayout.setHorizontalGroup(
-            BookListFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookListFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout BookListDialogLayout = new javax.swing.GroupLayout(BookListDialog.getContentPane());
+        BookListDialog.getContentPane().setLayout(BookListDialogLayout);
+        BookListDialogLayout.setHorizontalGroup(
+            BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BookListDialogLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jScrollPane6, javax.swing.GroupLayout.DEFAULT_SIZE, 888, Short.MAX_VALUE)
                 .addContainerGap())
-            .addGroup(BookListFrameLayout.createSequentialGroup()
+            .addGroup(BookListDialogLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jTextField20, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1158,7 +1152,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jComboBox4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(71, 71, 71))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookListFrameLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookListDialogLayout.createSequentialGroup()
                 .addGap(9, 9, 9)
                 .addComponent(jButton33, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
@@ -1169,11 +1163,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addComponent(jButton38, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(24, 24, 24))
         );
-        BookListFrameLayout.setVerticalGroup(
-            BookListFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookListFrameLayout.createSequentialGroup()
+        BookListDialogLayout.setVerticalGroup(
+            BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BookListDialogLayout.createSequentialGroup()
                 .addGap(14, 14, 14)
-                .addGroup(BookListFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField20, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton35, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel31)
@@ -1181,7 +1175,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addGap(30, 30, 30)
                 .addComponent(jScrollPane6, javax.swing.GroupLayout.PREFERRED_SIZE, 387, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 44, Short.MAX_VALUE)
-                .addGroup(BookListFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton38, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton36, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton34, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1189,11 +1183,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addGap(35, 35, 35))
         );
 
-        BookEditFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        BookEditFrame.setSize(new java.awt.Dimension(500, 600));
-
         jLabel23.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel23.setText("Nosaukums:");
+        jLabel23.setText("Vārds:");
 
         jButton22.setText("Saglabāt");
         jButton22.addActionListener(new java.awt.event.ActionListener() {
@@ -1252,53 +1243,52 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jScrollPane3.setViewportView(jTextArea1);
 
         jLabel30.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel30.setText("Pieejamība:");
+        jLabel30.setText("Pieiejamība:");
 
         jCheckBox1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jCheckBox1.setText("Pieejama");
-        jCheckBox1.setEnabled(false);
+        jCheckBox1.setText("jCheckBox1");
 
-        javax.swing.GroupLayout BookEditFrameLayout = new javax.swing.GroupLayout(BookEditFrame.getContentPane());
-        BookEditFrame.getContentPane().setLayout(BookEditFrameLayout);
-        BookEditFrameLayout.setHorizontalGroup(
-            BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookEditFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout BookEditDialogLayout = new javax.swing.GroupLayout(BookEditDialog.getContentPane());
+        BookEditDialog.getContentPane().setLayout(BookEditDialogLayout);
+        BookEditDialogLayout.setHorizontalGroup(
+            BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BookEditDialogLayout.createSequentialGroup()
                 .addGap(140, 140, 140)
                 .addComponent(jButton22, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jButton23, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditFrameLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
                 .addContainerGap(104, Short.MAX_VALUE)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(BookEditFrameLayout.createSequentialGroup()
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(BookEditDialogLayout.createSequentialGroup()
                         .addComponent(jLabel30)
                         .addGap(18, 18, 18)
                         .addComponent(jCheckBox1))
-                    .addGroup(BookEditFrameLayout.createSequentialGroup()
-                        .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditFrameLayout.createSequentialGroup()
+                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel29)
                                 .addGap(18, 18, 18)
                                 .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditFrameLayout.createSequentialGroup()
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel27)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jSpinner1))
-                            .addGroup(BookEditFrameLayout.createSequentialGroup()
+                            .addGroup(BookEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel23)
                                 .addGap(18, 18, 18)
                                 .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addGroup(BookEditFrameLayout.createSequentialGroup()
+                            .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                .addGroup(BookEditDialogLayout.createSequentialGroup()
                                     .addComponent(jLabel25)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(jTextField19, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditFrameLayout.createSequentialGroup()
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
                                     .addComponent(jLabel24)
                                     .addGap(18, 18, 18)
                                     .addComponent(jTextField16, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(BookEditFrameLayout.createSequentialGroup()
+                            .addGroup(BookEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel26)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jTextField18, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
@@ -1306,51 +1296,47 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                         .addComponent(jButton24, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
         );
-        BookEditFrameLayout.setVerticalGroup(
-            BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookEditFrameLayout.createSequentialGroup()
+        BookEditDialogLayout.setVerticalGroup(
+            BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BookEditDialogLayout.createSequentialGroup()
                 .addGap(106, 106, 106)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel23))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel24)
                     .addComponent(jTextField16, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel25)
                     .addComponent(jTextField19, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton24, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(BookEditFrameLayout.createSequentialGroup()
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(BookEditDialogLayout.createSequentialGroup()
                         .addGap(32, 32, 32)
-                        .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel27)
                             .addComponent(jSpinner1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(BookEditFrameLayout.createSequentialGroup()
+                    .addGroup(BookEditDialogLayout.createSequentialGroup()
                         .addGap(7, 7, 7)
-                        .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jTextField18, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLabel26))))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel29))
                 .addGap(28, 28, 28)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel30)
                     .addComponent(jCheckBox1))
                 .addGap(18, 18, 18)
-                .addGroup(BookEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jButton22, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton23, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(105, Short.MAX_VALUE))
         );
-
-        UserListFrameTrue.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        UserListFrameTrue.setPreferredSize(new java.awt.Dimension(900, 600));
-        UserListFrameTrue.setSize(new java.awt.Dimension(900, 600));
 
         jTable4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jTable4.setModel(new javax.swing.table.DefaultTableModel(
@@ -1373,10 +1359,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton29.setText("Pievienot");
 
         jButton37.setBackground(new java.awt.Color(204, 204, 204));
-        jButton37.setText("Mainīt lomu");
+        jButton37.setText("Atcelt");
 
         jButton30.setBackground(new java.awt.Color(204, 204, 204));
-        jButton30.setText("Rediģēt");
+        jButton30.setText("Rēdiģēt");
         jButton30.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton30ActionPerformed(evt);
@@ -1396,55 +1382,59 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton32.setBackground(new java.awt.Color(204, 204, 204));
         jButton32.setText("Dzēst");
 
-        javax.swing.GroupLayout UserListFrameTrueLayout = new javax.swing.GroupLayout(UserListFrameTrue.getContentPane());
-        UserListFrameTrue.getContentPane().setLayout(UserListFrameTrueLayout);
-        UserListFrameTrueLayout.setHorizontalGroup(
-            UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserListFrameTrueLayout.createSequentialGroup()
-                .addGroup(UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(UserListFrameTrueLayout.createSequentialGroup()
+        jButton40.setBackground(new java.awt.Color(204, 204, 204));
+        jButton40.setText("Mainīt lomu");
+
+        javax.swing.GroupLayout UserListFrameDialogLayout = new javax.swing.GroupLayout(UserListFrameDialog.getContentPane());
+        UserListFrameDialog.getContentPane().setLayout(UserListFrameDialogLayout);
+        UserListFrameDialogLayout.setHorizontalGroup(
+            UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
+                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(UserListFrameDialogLayout.createSequentialGroup()
                         .addContainerGap()
                         .addComponent(jScrollPane5, javax.swing.GroupLayout.DEFAULT_SIZE, 888, Short.MAX_VALUE))
-                    .addGroup(UserListFrameTrueLayout.createSequentialGroup()
-                        .addGroup(UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(UserListFrameTrueLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addComponent(jButton31)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(UserListFrameTrueLayout.createSequentialGroup()
-                                .addGap(16, 16, 16)
-                                .addComponent(jButton29, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jButton30, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(12, 12, 12)
-                                .addComponent(jButton32, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jButton37, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                    .addGroup(UserListFrameDialogLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jButton31)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 698, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
+                .addGap(16, 16, 16)
+                .addComponent(jButton29, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jButton30, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(12, 12, 12)
+                .addComponent(jButton32, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jButton40, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jButton37, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(21, 21, 21))
         );
-        UserListFrameTrueLayout.setVerticalGroup(
-            UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserListFrameTrueLayout.createSequentialGroup()
+        UserListFrameDialogLayout.setVerticalGroup(
+            UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
                 .addGap(14, 14, 14)
-                .addGroup(UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton31))
                 .addGap(30, 30, 30)
                 .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(31, 31, 31)
-                .addGroup(UserListFrameTrueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton37, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton32, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton30, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton29, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jButton29, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton40, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton37, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(35, Short.MAX_VALUE))
         );
 
-        UserEditFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        UserEditFrame.setPreferredSize(new java.awt.Dimension(450, 450));
-        UserEditFrame.setSize(new java.awt.Dimension(450, 450));
+        UserEditDialog.setPreferredSize(new java.awt.Dimension(450, 450));
+        UserEditDialog.setSize(new java.awt.Dimension(450, 450));
 
         jLabel14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel14.setText("Vārds:");
@@ -1478,7 +1468,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jLabel21.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel21.setText("Loma:");
 
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ADMIN", "LIBRARIAN", "READER", "AUTHOR" }));
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         jButton39.setBackground(new java.awt.Color(204, 204, 204));
         jButton39.setText("Saglabāt");
@@ -1488,101 +1478,97 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout UserEditFrameLayout = new javax.swing.GroupLayout(UserEditFrame.getContentPane());
-        UserEditFrame.getContentPane().setLayout(UserEditFrameLayout);
-        UserEditFrameLayout.setHorizontalGroup(
-            UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createSequentialGroup()
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(UserEditFrameLayout.createSequentialGroup()
-                        .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(UserEditFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout UserEditDialogLayout = new javax.swing.GroupLayout(UserEditDialog.getContentPane());
+        UserEditDialog.getContentPane().setLayout(UserEditDialogLayout);
+        UserEditDialogLayout.setHorizontalGroup(
+            UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(UserEditDialogLayout.createSequentialGroup()
+                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(UserEditDialogLayout.createSequentialGroup()
                                 .addGap(121, 121, 121)
                                 .addComponent(jLabel18))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addComponent(jLabel21)
                                 .addComponent(jLabel20)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jTextField13)
                             .addComponent(jTextField15)
                             .addComponent(jComboBox1, 0, 218, Short.MAX_VALUE)))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createSequentialGroup()
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
-                        .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createSequentialGroup()
-                                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
+                                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel14)
                                     .addComponent(jLabel16))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
-                            .addGroup(UserEditFrameLayout.createSequentialGroup()
+                            .addGroup(UserEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel17)
                                 .addGap(13, 13, 13)))
-                        .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(jTextField14)
                             .addComponent(jTextField11)
                             .addComponent(jTextField12, javax.swing.GroupLayout.DEFAULT_SIZE, 212, Short.MAX_VALUE))))
                 .addGap(63, 63, 63))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
                 .addGap(0, 0, Short.MAX_VALUE)
                 .addComponent(jButton15, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(114, 114, 114))
-            .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(UserEditFrameLayout.createSequentialGroup()
+            .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(UserEditDialogLayout.createSequentialGroup()
                     .addGap(123, 123, 123)
                     .addComponent(jButton39, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addContainerGap(227, Short.MAX_VALUE)))
         );
-        UserEditFrameLayout.setVerticalGroup(
-            UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserEditFrameLayout.createSequentialGroup()
+        UserEditDialogLayout.setVerticalGroup(
+            UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(UserEditDialogLayout.createSequentialGroup()
                 .addGap(106, 106, 106)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jTextField12, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel14, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jTextField11, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel16))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel17)
                     .addComponent(jTextField14, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel18)
                     .addComponent(jTextField13, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel20)
                     .addComponent(jTextField15, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel21))
                 .addGap(40, 40, 40)
                 .addComponent(jButton15, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(85, Short.MAX_VALUE))
-            .addGroup(UserEditFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditFrameLayout.createSequentialGroup()
+            .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
                     .addContainerGap(319, Short.MAX_VALUE)
                     .addComponent(jButton39, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGap(86, 86, 86)))
         );
 
-        LoanFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        LoanFrame.setPreferredSize(new java.awt.Dimension(500, 350));
-        LoanFrame.setSize(new java.awt.Dimension(500, 350));
-
         jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel1.setText("Lasītājs:");
 
-        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { }));
+        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         jLabel2.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel2.setText("Grāmata:");
 
-        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { }));
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         jLabel3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel3.setText("Izsniegšanas datums:");
@@ -1591,72 +1577,68 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jLabel15.setText("Termiņš:");
 
         jButton16.setBackground(new java.awt.Color(204, 204, 204));
-        jButton16.setText("Izsniegt");
+        jButton16.setText("Izsneigt");
 
         jButton17.setBackground(new java.awt.Color(204, 204, 204));
         jButton17.setText("Atcelt");
 
-        javax.swing.GroupLayout LoanFrameLayout = new javax.swing.GroupLayout(LoanFrame.getContentPane());
-        LoanFrame.getContentPane().setLayout(LoanFrameLayout);
-        LoanFrameLayout.setHorizontalGroup(
-            LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoanFrameLayout.createSequentialGroup()
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(LoanFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout LoanDialogLayout = new javax.swing.GroupLayout(LoanDialog.getContentPane());
+        LoanDialog.getContentPane().setLayout(LoanDialogLayout);
+        LoanDialogLayout.setHorizontalGroup(
+            LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(LoanDialogLayout.createSequentialGroup()
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(LoanDialogLayout.createSequentialGroup()
                         .addGap(203, 203, 203)
                         .addComponent(jLabel15)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jFormattedTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanFrameLayout.createSequentialGroup()
+                    .addGroup(LoanDialogLayout.createSequentialGroup()
                         .addGap(167, 167, 167)
                         .addComponent(jButton16, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton17, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanFrameLayout.createSequentialGroup()
+                    .addGroup(LoanDialogLayout.createSequentialGroup()
                         .addGap(166, 166, 166)
                         .addComponent(jLabel1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanFrameLayout.createSequentialGroup()
+                    .addGroup(LoanDialogLayout.createSequentialGroup()
                         .addGap(113, 113, 113)
-                        .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(jLabel2)
                             .addComponent(jLabel3))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(149, Short.MAX_VALUE))
         );
-        LoanFrameLayout.setVerticalGroup(
-            LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoanFrameLayout.createSequentialGroup()
+        LoanDialogLayout.setVerticalGroup(
+            LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(LoanDialogLayout.createSequentialGroup()
                 .addGap(124, 124, 124)
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(jComboBox3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel15)
                     .addComponent(jFormattedTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(26, 26, 26)
-                .addGroup(LoanFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton16, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton17, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(71, Short.MAX_VALUE))
         );
-
-        ReturnFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        ReturnFrame.setPreferredSize(new java.awt.Dimension(600, 400));
-        ReturnFrame.setSize(new java.awt.Dimension(600, 400));
 
         jLabel19.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel19.setText("Aktīvie izsniegumi");
@@ -1688,41 +1670,37 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton19.setBackground(new java.awt.Color(204, 204, 204));
         jButton19.setText("Atcelt");
 
-        javax.swing.GroupLayout ReturnFrameLayout = new javax.swing.GroupLayout(ReturnFrame.getContentPane());
-        ReturnFrame.getContentPane().setLayout(ReturnFrameLayout);
-        ReturnFrameLayout.setHorizontalGroup(
-            ReturnFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReturnFrameLayout.createSequentialGroup()
-                .addGroup(ReturnFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(ReturnFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout ReturnDialogLayout = new javax.swing.GroupLayout(ReturnDialog.getContentPane());
+        ReturnDialog.getContentPane().setLayout(ReturnDialogLayout);
+        ReturnDialogLayout.setHorizontalGroup(
+            ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ReturnDialogLayout.createSequentialGroup()
+                .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(ReturnDialogLayout.createSequentialGroup()
                         .addGap(25, 25, 25)
-                        .addGroup(ReturnFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel19)
                             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 555, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(ReturnFrameLayout.createSequentialGroup()
+                    .addGroup(ReturnDialogLayout.createSequentialGroup()
                         .addGap(225, 225, 225)
                         .addComponent(jButton18, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(26, 26, 26)
                         .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(20, Short.MAX_VALUE))
         );
-        ReturnFrameLayout.setVerticalGroup(
-            ReturnFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReturnFrameLayout.createSequentialGroup()
+        ReturnDialogLayout.setVerticalGroup(
+            ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ReturnDialogLayout.createSequentialGroup()
                 .addGap(22, 22, 22)
                 .addComponent(jLabel19)
                 .addGap(27, 27, 27)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 223, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 32, Short.MAX_VALUE)
-                .addGroup(ReturnFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton18, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(31, 31, 31))
         );
-
-        ReservationFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        ReservationFrame.setPreferredSize(new java.awt.Dimension(800, 500));
-        ReservationFrame.setSize(new java.awt.Dimension(800, 500));
 
         jLabel28.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel28.setText("Rezervāciju saraksts");
@@ -1760,14 +1738,14 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton28.setBackground(new java.awt.Color(204, 204, 204));
         jButton28.setText("Izpildīt");
 
-        javax.swing.GroupLayout ReservationFrameLayout = new javax.swing.GroupLayout(ReservationFrame.getContentPane());
-        ReservationFrame.getContentPane().setLayout(ReservationFrameLayout);
-        ReservationFrameLayout.setHorizontalGroup(
-            ReservationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReservationFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout ReservationDialogLayout = new javax.swing.GroupLayout(ReservationDialog.getContentPane());
+        ReservationDialog.getContentPane().setLayout(ReservationDialogLayout);
+        ReservationDialogLayout.setHorizontalGroup(
+            ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ReservationDialogLayout.createSequentialGroup()
                 .addGap(25, 25, 25)
-                .addGroup(ReservationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(ReservationFrameLayout.createSequentialGroup()
+                .addGroup(ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(ReservationDialogLayout.createSequentialGroup()
                         .addGap(18, 18, 18)
                         .addComponent(jButton25, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -1780,25 +1758,21 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                     .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 742, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(33, Short.MAX_VALUE))
         );
-        ReservationFrameLayout.setVerticalGroup(
-            ReservationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReservationFrameLayout.createSequentialGroup()
+        ReservationDialogLayout.setVerticalGroup(
+            ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ReservationDialogLayout.createSequentialGroup()
                 .addGap(22, 22, 22)
                 .addComponent(jLabel28)
                 .addGap(27, 27, 27)
                 .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 365, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(ReservationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton25, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton26, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton28, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton27, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(15, Short.MAX_VALUE))
         );
-
-        NotificationFrame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        NotificationFrame.setPreferredSize(new java.awt.Dimension(700, 450));
-        NotificationFrame.setSize(new java.awt.Dimension(700, 450));
 
         jLabel22.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jLabel22.setText("Mani paziņojumi");
@@ -1825,39 +1799,37 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton21.setBackground(new java.awt.Color(204, 204, 204));
         jButton21.setText("Aizvērt");
 
-        javax.swing.GroupLayout NotificationFrameLayout = new javax.swing.GroupLayout(NotificationFrame.getContentPane());
-        NotificationFrame.getContentPane().setLayout(NotificationFrameLayout);
-        NotificationFrameLayout.setHorizontalGroup(
-            NotificationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(NotificationFrameLayout.createSequentialGroup()
-                .addGroup(NotificationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(NotificationFrameLayout.createSequentialGroup()
+        javax.swing.GroupLayout NotificationDialogLayout = new javax.swing.GroupLayout(NotificationDialog.getContentPane());
+        NotificationDialog.getContentPane().setLayout(NotificationDialogLayout);
+        NotificationDialogLayout.setHorizontalGroup(
+            NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(NotificationDialogLayout.createSequentialGroup()
+                .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(NotificationDialogLayout.createSequentialGroup()
                         .addGap(25, 25, 25)
-                        .addGroup(NotificationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel22)
                             .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 652, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(NotificationFrameLayout.createSequentialGroup()
+                    .addGroup(NotificationDialogLayout.createSequentialGroup()
                         .addGap(26, 26, 26)
                         .addComponent(jButton20, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(jButton21, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(23, Short.MAX_VALUE))
         );
-        NotificationFrameLayout.setVerticalGroup(
-            NotificationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(NotificationFrameLayout.createSequentialGroup()
+        NotificationDialogLayout.setVerticalGroup(
+            NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(NotificationDialogLayout.createSequentialGroup()
                 .addGap(22, 22, 22)
                 .addComponent(jLabel22)
                 .addGap(27, 27, 27)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 287, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addGroup(NotificationFrameLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton21, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton20, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(31, 31, 31))
         );
-
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -1989,17 +1961,17 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JDialog BookEditFrame;
-    private javax.swing.JDialog BookListFrame;
-    private javax.swing.JDialog LoanFrame;
-    private javax.swing.JDialog LoginFrame;
-    private javax.swing.JDialog MainFrame;
-    private javax.swing.JDialog NotificationFrame;
-    private javax.swing.JDialog RegisterFrame;
-    private javax.swing.JDialog ReservationFrame;
-    private javax.swing.JDialog ReturnFrame;
-    private javax.swing.JDialog UserEditFrame;
-    private javax.swing.JDialog UserListFrameTrue;
+    private javax.swing.JDialog BookEditDialog;
+    private javax.swing.JDialog BookListDialog;
+    private javax.swing.JDialog LoanDialog;
+    private javax.swing.JDialog LoginDialog;
+    private javax.swing.JDialog MainDialog;
+    private javax.swing.JDialog NotificationDialog;
+    private javax.swing.JDialog RegisterDialog;
+    private javax.swing.JDialog ReservationDialog;
+    private javax.swing.JDialog ReturnDialog;
+    private javax.swing.JDialog UserEditDialog;
+    private javax.swing.JDialog UserListFrameDialog;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton10;
     private javax.swing.JButton jButton11;
@@ -2033,6 +2005,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JButton jButton38;
     private javax.swing.JButton jButton39;
     private javax.swing.JButton jButton4;
+    private javax.swing.JButton jButton40;
     private javax.swing.JButton jButton5;
     private javax.swing.JButton jButton6;
     private javax.swing.JButton jButton7;
