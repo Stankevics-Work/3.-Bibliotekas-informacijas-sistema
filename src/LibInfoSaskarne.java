@@ -70,8 +70,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         } catch (SQLException ex) {
             showError(ex);
         }
-        jTextField4.setText("");
-        jTextField3.setText("");
+        UsernameTextField.setText("");
+        PasswordTextField.setText("");
         showLogin();
     }
 
@@ -141,7 +141,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void showLogin() {
         clearRegisterFields();
         showDialog(LoginDialog);
-        jTextField3.requestFocusInWindow();
+        PasswordTextField.requestFocusInWindow();
     }
 
     private void showMain() {
@@ -156,12 +156,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     private void configureMenus() {
-        jMenu1.removeAll(); jMenu2.removeAll(); jMenu3.removeAll(); jMenu4.removeAll();
-        jMenu5.removeAll(); jMenu6.removeAll(); jMenu7.removeAll();
+        FileMenu.removeAll(); BookMenu.removeAll(); UserMenu.removeAll(); LoanMenu.removeAll();
+        ReservationMenu.removeAll(); NotificationMenu.removeAll(); HelpMenu.removeAll();
 
         javax.swing.JMenuItem exit = new javax.swing.JMenuItem("Iziet");
         exit.addActionListener(e -> exitApplication());
-        jMenu1.add(exit);
+        FileMenu.add(exit);
 
         javax.swing.JMenuItem books = new javax.swing.JMenuItem("Saraksts");
         books.addActionListener(e -> openBookList());
@@ -169,13 +169,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         addBook.addActionListener(e -> openNewBook());
         javax.swing.JMenuItem searchBook = new javax.swing.JMenuItem("Meklēt");
         searchBook.addActionListener(e -> openBookList());
-        jMenu2.add(books); jMenu2.add(addBook); jMenu2.add(searchBook);
+        BookMenu.add(books); BookMenu.add(addBook); BookMenu.add(searchBook);
 
         javax.swing.JMenuItem users = new javax.swing.JMenuItem("Saraksts");
         users.addActionListener(e -> openUserList());
         javax.swing.JMenuItem addUser = new javax.swing.JMenuItem("Pievienot");
         addUser.addActionListener(e -> openNewUser());
-        jMenu3.add(users); jMenu3.add(addUser);
+        UserMenu.add(users); UserMenu.add(addUser);
 
         javax.swing.JMenuItem issue = new javax.swing.JMenuItem("Izsniegt");
         issue.addActionListener(e -> openLoan());
@@ -183,39 +183,39 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         ret.addActionListener(e -> openReturn());
         javax.swing.JMenuItem overdue = new javax.swing.JMenuItem("Kavētie");
         overdue.addActionListener(e -> openReturn(true));
-        jMenu4.add(issue); jMenu4.add(ret); jMenu4.add(overdue);
+        LoanMenu.add(issue); LoanMenu.add(ret); LoanMenu.add(overdue);
 
         javax.swing.JMenuItem reservations = new javax.swing.JMenuItem("Saraksts");
         reservations.addActionListener(e -> openReservations());
-        jMenu5.add(reservations);
+        ReservationMenu.add(reservations);
 
         javax.swing.JMenuItem notifications = new javax.swing.JMenuItem("Mani paziņojumi");
         notifications.addActionListener(e -> openNotifications());
-        jMenu6.add(notifications);
+        NotificationMenu.add(notifications);
 
         javax.swing.JMenuItem about = new javax.swing.JMenuItem("Par programmu");
         about.addActionListener(e -> JOptionPane.showMessageDialog(MainDialog,
                 "LibInfo - bibliotēkas menedžmenta sistēma\nJava Swing + Apache Derby",
                 "Par programmu", JOptionPane.INFORMATION_MESSAGE));
-        jMenu7.add(about);
+        HelpMenu.add(about);
     }
 
     private void wireNavigation() {
         // Existing NetBeans listeners are retained for design compatibility; these listeners perform the actual transitions.
-        jButton4.addActionListener(e -> openRegister());
-        jButton5.addActionListener(e -> login());
-        jButton6.addActionListener(e -> exitApplication());
-        jButton1.addActionListener(e -> showLogin());
-        jButton2.addActionListener(e -> registerUser());
+        RegisterButton.addActionListener(e -> openRegister());
+        LoginButton.addActionListener(e -> login());
+        CloseButton.addActionListener(e -> exitApplication());
+        CancelButton.addActionListener(e -> showLogin());
+        RegisterButton1.addActionListener(e -> registerUser());
 
-        jButton3.addActionListener(e -> openNotifications());
-        jButton7.addActionListener(e -> openNewBook());
-        jButton8.addActionListener(e -> openBookList());
-        jButton9.addActionListener(e -> openReturn());
-        jButton10.addActionListener(e -> openLoan());
-        jButton11.addActionListener(e -> openUserList());
-        jButton12.addActionListener(e -> openReservations());
-        jButton13.addActionListener(e -> exitApplication());
+        NotificationsButton.addActionListener(e -> openNotifications());
+        BookAddButton.addActionListener(e -> openNewBook());
+        BookListButton.addActionListener(e -> openBookList());
+        BookReturnButton.addActionListener(e -> openReturn());
+        BookLoanButton.addActionListener(e -> openLoan());
+        UserListButton.addActionListener(e -> openUserList());
+        ReservationButton.addActionListener(e -> openReservations());
+        CloseButton1.addActionListener(e -> exitApplication());
 
         jButton33.addActionListener(e -> openNewBook());
         jButton34.addActionListener(e -> editSelectedBook());
@@ -236,7 +236,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
         jButton16.addActionListener(e -> issueBook());
         jButton17.addActionListener(e -> returnToMain(LoanDialog));
-        jButton18.addActionListener(e -> returnSelectedBook());
+        ReturnButton.addActionListener(e -> returnSelectedBook());
         jButton19.addActionListener(e -> returnToMain(ReturnDialog));
 
         jButton25.addActionListener(e -> createReservation());
@@ -255,13 +255,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         boolean staff = isStaff();
         boolean admin = isAdmin();
         boolean reader = isReader();
-        jButton7.setEnabled(staff);
-        jButton8.setEnabled(true);
-        jButton9.setEnabled(staff);
-        jButton10.setEnabled(staff);
-        jButton11.setEnabled(staff);
-        jButton12.setEnabled(staff || reader);
-        jButton3.setEnabled(true);
+        BookAddButton.setEnabled(staff);
+        BookListButton.setEnabled(true);
+        BookReturnButton.setEnabled(staff);
+        BookLoanButton.setEnabled(staff);
+        UserListButton.setEnabled(staff);
+        ReservationButton.setEnabled(staff || reader);
+        NotificationsButton.setEnabled(true);
         // Menus remain available visually, but action methods enforce the same permissions.
         MainDialog.setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
     }
@@ -282,8 +282,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     @FunctionalInterface private interface DbOperation<T> { T run(Connection c) throws SQLException; }
 
     private void login() {
-        String username = jTextField4.getText().trim();
-        String password = jTextField3.getText();
+        String username = UsernameTextField.getText().trim();
+        String password = PasswordTextField.getText();
         if (username.isEmpty() || password.isEmpty()) {
             showError(new IllegalArgumentException("Ievadiet lietotājvārdu un paroli.")); return;
         }
@@ -302,16 +302,16 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         clearRegisterFields();
         LoginDialog.setVisible(false);
         showDialog(RegisterDialog);
-        jTextField5.requestFocusInWindow();
+        SurnameTextField.requestFocusInWindow();
     }
 
     private void registerUser() {
-        String vards = jTextField5.getText().trim();
-        String uzvards = jTextField6.getText().trim();
-        String username = jTextField7.getText().trim();
-        String password = jTextField8.getText();
-        String confirm = jTextField10.getText();
-        String email = jTextField9.getText().trim();
+        String vards = SurnameTextField.getText().trim();
+        String uzvards = NameTextField.getText().trim();
+        String username = PasswordTextField1.getText().trim();
+        String password = UsernameTextField1.getText();
+        String confirm = PasswordProveTextField.getText();
+        String email = EMailTextField.getText().trim();
         if (vards.isEmpty() || uzvards.isEmpty() || username.isEmpty() || password.isEmpty() || confirm.isEmpty() || email.isEmpty()) {
             showError(new IllegalArgumentException("Visi reģistrācijas lauki ir obligāti.")); return;
         }
@@ -332,7 +332,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             });
             JOptionPane.showMessageDialog(RegisterDialog, "Reģistrācija veiksmīga. Tagad varat pieteikties.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             showLogin();
-            jTextField4.setText(username); jTextField3.setText(password);
+            UsernameTextField.setText(username); PasswordTextField.setText(password);
         } catch (Exception ex) { showError(ex); }
     }
 
@@ -535,13 +535,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void openReturn(){openReturn(false);}
     private void openReturn(boolean overdueOnly){
         if(!isStaff()){showError(new SecurityException("Grāmatu atgriešanu drīkst veikt darbinieks."));return;} showDialog(ReturnDialog); try{
-            List<Izsniegums> loans=db(c->overdueOnly?new IzsniegumsDAO(c).findOverdue():new IzsniegumsDAO(c).findActive()); DefaultTableModel model=(DefaultTableModel)jTable1.getModel();model.setRowCount(0);
+            List<Izsniegums> loans=db(c->overdueOnly?new IzsniegumsDAO(c).findOverdue():new IzsniegumsDAO(c).findActive()); DefaultTableModel model=(DefaultTableModel)ReturnTable.getModel();model.setRowCount(0);
             for(Izsniegums l:loans)model.addRow(new Object[]{l.getIzsniegumaId(),l.getLietotajs(),l.getEksemplars()==null?"":l.getEksemplars().getGramata().getNosaukums(),l.getIzsniegts(),l.getTermins()});
-            jLabel19.setText(overdueOnly?"Kavētie izsniegumi":"Aktīvie izsniegumi");
+            ReturnLabel.setText(overdueOnly?"Kavētie izsniegumi":"Aktīvie izsniegumi");
         }catch(Exception ex){showError(ex);}
     }
     private void returnSelectedBook(){
-        if(!isStaff())return;int row=jTable1.getSelectedRow();if(row<0){showError(new IllegalArgumentException("Izvēlieties izsniegumu."));return;}int id=((Number)jTable1.getValueAt(row,0)).intValue();try{if(!db(c->new IzsniegumsDAO(c).atgriezt(id)))throw new SQLException("Izsniegumu neizdevās atgriezt.");openReturn();}catch(Exception ex){showError(ex);}
+        if(!isStaff())return;int row=ReturnTable.getSelectedRow();if(row<0){showError(new IllegalArgumentException("Izvēlieties izsniegumu."));return;}int id=((Number)ReturnTable.getValueAt(row,0)).intValue();try{if(!db(c->new IzsniegumsDAO(c).atgriezt(id)))throw new SQLException("Izsniegumu neizdevās atgriezt.");openReturn();}catch(Exception ex){showError(ex);}
     }
 
     private void openReservations(){
@@ -607,7 +607,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         hideAllDialogs(); dispose(); System.exit(0);
     }
 
-    private void clearRegisterFields(){jTextField5.setText("");jTextField6.setText("");jTextField7.setText("");jTextField8.setText("");jTextField9.setText("");jTextField10.setText("");}
+    private void clearRegisterFields(){SurnameTextField.setText("");NameTextField.setText("");PasswordTextField1.setText("");UsernameTextField1.setText("");EMailTextField.setText("");PasswordProveTextField.setText("");}
     private void clearBookFields(){jTextField17.setText("");jTextField16.setText("");jTextField19.setText("");jTextField18.setText("");jSpinner1.setValue(2026);jTextArea1.setText("");jCheckBox1.setSelected(true);}
     private void fillBookFields(Gramata b){jTextField17.setText(nvl(b.getNosaukums()));jTextField16.setText(nvl(b.getAutors()));jTextField19.setText(nvl(b.getIsbn()));jTextField18.setText(nvl(b.getKategorija()));jSpinner1.setValue(b.getIzdosanasGads()==null?2026:b.getIzdosanasGads());jTextArea1.setText(nvl(b.getApraksts()));jCheckBox1.setSelected(b.isPieejama());}
     private void clearUserFields(){jTextField12.setText("");jTextField11.setText("");jTextField14.setText("");jTextField13.setText("");jTextField15.setText("");jComboBox1.setSelectedItem("READER");}
@@ -635,47 +635,47 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void initComponents() {
 
         LoginDialog = new javax.swing.JDialog();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
-        jTextField4 = new javax.swing.JTextField();
-        jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
-        jButton6 = new javax.swing.JButton();
+        AppLabel = new javax.swing.JLabel();
+        UsernameLabel = new javax.swing.JLabel();
+        UsernameTextField = new javax.swing.JTextField();
+        PasswordLabel = new javax.swing.JLabel();
+        PasswordTextField = new javax.swing.JTextField();
+        LoginButton = new javax.swing.JButton();
+        RegisterButton = new javax.swing.JButton();
+        CloseButton = new javax.swing.JButton();
         RegisterDialog = new javax.swing.JDialog();
-        jLabel7 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        jTextField5 = new javax.swing.JTextField();
-        jTextField6 = new javax.swing.JTextField();
-        jLabel10 = new javax.swing.JLabel();
-        jTextField7 = new javax.swing.JTextField();
-        jLabel11 = new javax.swing.JLabel();
-        jTextField8 = new javax.swing.JTextField();
-        jLabel12 = new javax.swing.JLabel();
-        jTextField9 = new javax.swing.JTextField();
-        jLabel13 = new javax.swing.JLabel();
-        jTextField10 = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        RegisterLabel = new javax.swing.JLabel();
+        NameLabel = new javax.swing.JLabel();
+        NameTextField = new javax.swing.JTextField();
+        SurnameLabel = new javax.swing.JLabel();
+        SurnameTextField = new javax.swing.JTextField();
+        UsernameLabel1 = new javax.swing.JLabel();
+        PasswordLabel1 = new javax.swing.JLabel();
+        PasswordTextField1 = new javax.swing.JTextField();
+        UsernameTextField1 = new javax.swing.JTextField();
+        PasswordProveLabel = new javax.swing.JLabel();
+        PasswordProveTextField = new javax.swing.JTextField();
+        EMailLabel = new javax.swing.JLabel();
+        EMailTextField = new javax.swing.JTextField();
+        RegisterButton1 = new javax.swing.JButton();
+        CancelButton = new javax.swing.JButton();
         MainDialog = new javax.swing.JDialog();
-        jButton3 = new javax.swing.JButton();
-        jButton7 = new javax.swing.JButton();
-        jButton8 = new javax.swing.JButton();
-        jButton9 = new javax.swing.JButton();
-        jButton10 = new javax.swing.JButton();
-        jButton11 = new javax.swing.JButton();
-        jButton12 = new javax.swing.JButton();
-        jButton13 = new javax.swing.JButton();
-        jMenuBar1 = new javax.swing.JMenuBar();
-        jMenu1 = new javax.swing.JMenu();
-        jMenu2 = new javax.swing.JMenu();
-        jMenu3 = new javax.swing.JMenu();
-        jMenu4 = new javax.swing.JMenu();
-        jMenu5 = new javax.swing.JMenu();
-        jMenu6 = new javax.swing.JMenu();
-        jMenu7 = new javax.swing.JMenu();
+        BookListButton = new javax.swing.JButton();
+        BookAddButton = new javax.swing.JButton();
+        UserListButton = new javax.swing.JButton();
+        BookLoanButton = new javax.swing.JButton();
+        ReservationButton = new javax.swing.JButton();
+        BookReturnButton = new javax.swing.JButton();
+        NotificationsButton = new javax.swing.JButton();
+        CloseButton1 = new javax.swing.JButton();
+        ActionsMenuBar = new javax.swing.JMenuBar();
+        FileMenu = new javax.swing.JMenu();
+        BookMenu = new javax.swing.JMenu();
+        UserMenu = new javax.swing.JMenu();
+        LoanMenu = new javax.swing.JMenu();
+        ReservationMenu = new javax.swing.JMenu();
+        NotificationMenu = new javax.swing.JMenu();
+        HelpMenu = new javax.swing.JMenu();
         BookListDialog = new javax.swing.JDialog();
         jScrollPane6 = new javax.swing.JScrollPane();
         jTable5 = new javax.swing.JTable();
@@ -743,10 +743,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton16 = new javax.swing.JButton();
         jButton17 = new javax.swing.JButton();
         ReturnDialog = new javax.swing.JDialog();
-        jLabel19 = new javax.swing.JLabel();
+        ReturnLabel = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
-        jButton18 = new javax.swing.JButton();
+        ReturnTable = new javax.swing.JTable();
+        ReturnButton = new javax.swing.JButton();
         jButton19 = new javax.swing.JButton();
         ReservationDialog = new javax.swing.JDialog();
         jLabel28 = new javax.swing.JLabel();
@@ -763,39 +763,38 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jButton20 = new javax.swing.JButton();
         jButton21 = new javax.swing.JButton();
 
-        LoginDialog.setPreferredSize(new java.awt.Dimension(420, 320));
         LoginDialog.setResizable(false);
 
-        jLabel4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel4.setText("Lietotājvārds:");
+        AppLabel.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        AppLabel.setText("LibInfo - Bibliotēkas sistēma");
 
-        jLabel5.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
-        jLabel5.setText("LibInfo - Bibliotēkas sistēma");
+        UsernameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        UsernameLabel.setText("Lietotājvārds:");
 
-        jLabel6.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel6.setText("Parole:");
+        PasswordLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        PasswordLabel.setText("Parole:");
 
-        jButton4.setBackground(new java.awt.Color(204, 204, 204));
-        jButton4.setText("Reģistrēties");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
+        LoginButton.setBackground(new java.awt.Color(204, 204, 204));
+        LoginButton.setText("Pieteikties");
+        LoginButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+                LoginButtonActionPerformed(evt);
             }
         });
 
-        jButton5.setBackground(new java.awt.Color(204, 204, 204));
-        jButton5.setText("Pieteikties");
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
+        RegisterButton.setBackground(new java.awt.Color(204, 204, 204));
+        RegisterButton.setText("Reģistrēties");
+        RegisterButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
+                RegisterButtonActionPerformed(evt);
             }
         });
 
-        jButton6.setBackground(new java.awt.Color(204, 204, 204));
-        jButton6.setText("Aizvērt");
-        jButton6.addActionListener(new java.awt.event.ActionListener() {
+        CloseButton.setBackground(new java.awt.Color(204, 204, 204));
+        CloseButton.setText("Aizvērt");
+        CloseButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton6ActionPerformed(evt);
+                CloseButtonActionPerformed(evt);
             }
         });
 
@@ -808,86 +807,85 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton6)
+                        .addComponent(CloseButton)
                         .addGap(73, 73, 73))
                     .addGroup(LoginDialogLayout.createSequentialGroup()
                         .addGap(8, 8, 8)
                         .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel5)
+                            .addComponent(AppLabel)
                             .addGroup(LoginDialogLayout.createSequentialGroup()
-                                .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addGap(43, 43, 43))))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
                 .addGap(110, 110, 110)
-                .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         LoginDialogLayout.setVerticalGroup(
             LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(LoginDialogLayout.createSequentialGroup()
                 .addGap(56, 56, 56)
-                .addComponent(jLabel5)
+                .addComponent(AppLabel)
                 .addGap(18, 18, 18)
                 .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(58, 58, 58)
                 .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton6, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton5, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(CloseButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(52, Short.MAX_VALUE))
         );
 
-        RegisterDialog.setPreferredSize(new java.awt.Dimension(420, 320));
         RegisterDialog.setResizable(false);
 
-        jLabel7.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel7.setText("Vārds:");
+        RegisterLabel.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        RegisterLabel.setText("Jauna lietotāja reģistrācija");
 
-        jLabel8.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
-        jLabel8.setText("Jauna lietotāja reģistrācija");
+        NameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        NameLabel.setText("Vārds:");
 
-        jLabel9.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel9.setText("Uzvārds:");
+        SurnameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        SurnameLabel.setText("Uzvārds:");
 
-        jLabel10.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel10.setText("Lietotājvārds:");
+        UsernameLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        UsernameLabel1.setText("Lietotājvārds:");
 
-        jLabel11.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel11.setText("Parole:");
+        PasswordLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        PasswordLabel1.setText("Parole:");
 
-        jLabel12.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel12.setText("Apstiprināt paroli:");
+        PasswordProveLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        PasswordProveLabel.setText("Apstiprināt paroli:");
 
-        jLabel13.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel13.setText("E-pasts:");
+        EMailLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        EMailLabel.setText("E-pasts:");
 
-        jButton1.setBackground(new java.awt.Color(204, 204, 204));
-        jButton1.setText("Atcelt");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        RegisterButton1.setBackground(new java.awt.Color(204, 204, 204));
+        RegisterButton1.setText("Reģistrēties");
+        RegisterButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                RegisterButton1ActionPerformed(evt);
             }
         });
 
-        jButton2.setBackground(new java.awt.Color(204, 204, 204));
-        jButton2.setText("Reģistrēties");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        CancelButton.setBackground(new java.awt.Color(204, 204, 204));
+        CancelButton.setText("Atcelt");
+        CancelButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                CancelButtonActionPerformed(evt);
             }
         });
 
@@ -901,73 +899,73 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
                         .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addComponent(RegisterLabel, javax.swing.GroupLayout.Alignment.TRAILING)
                                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                     .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
-                                        .addComponent(jLabel9)
+                                        .addComponent(SurnameLabel)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField5))
+                                        .addComponent(SurnameTextField))
                                     .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
-                                        .addComponent(jLabel7)
+                                        .addComponent(NameLabel)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(jLabel10)
+                                    .addComponent(UsernameLabel1)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(jLabel11)
+                                    .addComponent(PasswordLabel1)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(jLabel12)
+                                    .addComponent(PasswordProveLabel)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(jTextField10, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                    .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)))
                             .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                .addComponent(jLabel13)
+                                .addComponent(EMailLabel)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(25, 25, 25)))
                         .addGap(51, 51, 51))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(117, 117, 117))))
         );
         RegisterDialogLayout.setVerticalGroup(
             RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(RegisterDialogLayout.createSequentialGroup()
                 .addGap(41, 41, 41)
-                .addComponent(jLabel8)
+                .addComponent(RegisterLabel)
                 .addGap(18, 18, 18)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel7)
-                    .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(NameLabel)
+                    .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jLabel9)
-                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(SurnameLabel)
+                    .addComponent(SurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel10)
-                    .addComponent(jTextField8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(UsernameLabel1)
+                    .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel11)
-                    .addComponent(jTextField7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(PasswordLabel1)
+                    .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel12)
-                    .addComponent(jTextField10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(PasswordProveLabel)
+                    .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel13))
+                    .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(EMailLabel))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
                 .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -975,65 +973,65 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         MainDialog.setResizable(false);
         MainDialog.setSize(new java.awt.Dimension(470, 220));
 
-        jButton3.setBackground(new java.awt.Color(204, 204, 204));
-        jButton3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton3.setText("Paziņojumi");
-        jButton3.addActionListener(new java.awt.event.ActionListener() {
+        BookListButton.setBackground(new java.awt.Color(204, 204, 204));
+        BookListButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        BookListButton.setText("Grāmatu saraksts");
+
+        BookAddButton.setBackground(new java.awt.Color(204, 204, 204));
+        BookAddButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        BookAddButton.setText("Pievienot grāmatu");
+
+        UserListButton.setBackground(new java.awt.Color(204, 204, 204));
+        UserListButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        UserListButton.setText("Lietotāju saraksts");
+
+        BookLoanButton.setBackground(new java.awt.Color(204, 204, 204));
+        BookLoanButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        BookLoanButton.setText("Izsniegt grāmatu");
+
+        ReservationButton.setBackground(new java.awt.Color(204, 204, 204));
+        ReservationButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        ReservationButton.setText("Rezervācijas");
+
+        BookReturnButton.setBackground(new java.awt.Color(204, 204, 204));
+        BookReturnButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        BookReturnButton.setText("Atgriezt grāmatu");
+
+        NotificationsButton.setBackground(new java.awt.Color(204, 204, 204));
+        NotificationsButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        NotificationsButton.setText("Paziņojumi");
+        NotificationsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton3ActionPerformed(evt);
+                NotificationsButtonActionPerformed(evt);
             }
         });
 
-        jButton7.setBackground(new java.awt.Color(204, 204, 204));
-        jButton7.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton7.setText("Pievienot grāmatu");
+        CloseButton1.setBackground(new java.awt.Color(204, 204, 204));
+        CloseButton1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        CloseButton1.setText("Iziet");
 
-        jButton8.setBackground(new java.awt.Color(204, 204, 204));
-        jButton8.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton8.setText("Grāmatu saraksts");
+        FileMenu.setText("Fails");
+        ActionsMenuBar.add(FileMenu);
 
-        jButton9.setBackground(new java.awt.Color(204, 204, 204));
-        jButton9.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton9.setText("Atgriezt grāmatu");
+        BookMenu.setText("Grāmatas");
+        ActionsMenuBar.add(BookMenu);
 
-        jButton10.setBackground(new java.awt.Color(204, 204, 204));
-        jButton10.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton10.setText("Izsniegt grāmatu");
+        UserMenu.setText("Lietotāji");
+        ActionsMenuBar.add(UserMenu);
 
-        jButton11.setBackground(new java.awt.Color(204, 204, 204));
-        jButton11.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton11.setText("Lietotāju saraksts");
+        LoanMenu.setText("Izsniegums");
+        ActionsMenuBar.add(LoanMenu);
 
-        jButton12.setBackground(new java.awt.Color(204, 204, 204));
-        jButton12.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton12.setText("Rezervācijas");
+        ReservationMenu.setText("Rezervācijas");
+        ActionsMenuBar.add(ReservationMenu);
 
-        jButton13.setBackground(new java.awt.Color(204, 204, 204));
-        jButton13.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jButton13.setText("Iziet");
+        NotificationMenu.setText("Paziņojumi");
+        ActionsMenuBar.add(NotificationMenu);
 
-        jMenu1.setText("Fails");
-        jMenuBar1.add(jMenu1);
+        HelpMenu.setText("Palīdzība");
+        ActionsMenuBar.add(HelpMenu);
 
-        jMenu2.setText("Grāmatas");
-        jMenuBar1.add(jMenu2);
-
-        jMenu3.setText("Lietotāji");
-        jMenuBar1.add(jMenu3);
-
-        jMenu4.setText("Izsniegums");
-        jMenuBar1.add(jMenu4);
-
-        jMenu5.setText("Rezervācijas");
-        jMenuBar1.add(jMenu5);
-
-        jMenu6.setText("Paziņojumi");
-        jMenuBar1.add(jMenu6);
-
-        jMenu7.setText("Palīdzība");
-        jMenuBar1.add(jMenu7);
-
-        MainDialog.setJMenuBar(jMenuBar1);
+        MainDialog.setJMenuBar(ActionsMenuBar);
 
         javax.swing.GroupLayout MainDialogLayout = new javax.swing.GroupLayout(MainDialog.getContentPane());
         MainDialog.getContentPane().setLayout(MainDialogLayout);
@@ -1043,43 +1041,43 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(MainDialogLayout.createSequentialGroup()
-                        .addComponent(jButton8)
+                        .addComponent(BookListButton)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton7))
+                        .addComponent(BookAddButton))
                     .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                         .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainDialogLayout.createSequentialGroup()
-                            .addComponent(jButton11)
+                            .addComponent(UserListButton)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                            .addComponent(jButton10))
+                            .addComponent(BookLoanButton))
                         .addGroup(MainDialogLayout.createSequentialGroup()
                             .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(jButton12)
-                                .addComponent(jButton3))
+                                .addComponent(ReservationButton)
+                                .addComponent(NotificationsButton))
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(jButton13)
-                                .addComponent(jButton9)))))
-                .addContainerGap(174, Short.MAX_VALUE))
+                                .addComponent(CloseButton1)
+                                .addComponent(BookReturnButton)))))
+                .addContainerGap(179, Short.MAX_VALUE))
         );
         MainDialogLayout.setVerticalGroup(
             MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(MainDialogLayout.createSequentialGroup()
                 .addGap(18, 18, 18)
                 .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton7)
-                    .addComponent(jButton8))
+                    .addComponent(BookAddButton)
+                    .addComponent(BookListButton))
                 .addGap(18, 18, 18)
                 .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton10)
-                    .addComponent(jButton11))
+                    .addComponent(BookLoanButton)
+                    .addComponent(UserListButton))
                 .addGap(18, 18, 18)
                 .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton9)
-                    .addComponent(jButton12))
+                    .addComponent(BookReturnButton)
+                    .addComponent(ReservationButton))
                 .addGap(18, 18, 18)
                 .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton3)
-                    .addComponent(jButton13))
+                    .addComponent(NotificationsButton)
+                    .addComponent(CloseButton1))
                 .addContainerGap(17, Short.MAX_VALUE))
         );
 
@@ -1105,6 +1103,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
         jButton33.setBackground(new java.awt.Color(204, 204, 204));
         jButton33.setText("Pievienot");
+        jButton33.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton33ActionPerformed(evt);
+            }
+        });
 
         jButton34.setBackground(new java.awt.Color(204, 204, 204));
         jButton34.setText("Rēdiģēt");
@@ -1253,89 +1256,97 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         BookEditDialogLayout.setHorizontalGroup(
             BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(BookEditDialogLayout.createSequentialGroup()
-                .addGap(140, 140, 140)
+                .addGap(134, 134, 134)
                 .addComponent(jButton22, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton23, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
-                .addContainerGap(104, Short.MAX_VALUE)
                 .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addComponent(jLabel30)
-                        .addGap(18, 18, 18)
-                        .addComponent(jCheckBox1))
+                        .addGap(102, 102, 102)
+                        .addComponent(jLabel23)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditDialogLayout.createSequentialGroup()
+                        .addContainerGap(96, Short.MAX_VALUE)
+                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(BookEditDialogLayout.createSequentialGroup()
                                 .addComponent(jLabel29)
-                                .addGap(18, 18, 18)
-                                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, BookEditDialogLayout.createSequentialGroup()
-                                .addComponent(jLabel27)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jSpinner1))
+                                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                                .addGap(49, 49, 49))
                             .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                .addComponent(jLabel23)
-                                .addGap(18, 18, 18)
-                                .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                    .addComponent(jLabel25)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(jTextField19, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
-                                    .addComponent(jLabel24)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(jTextField16, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                .addComponent(jLabel26)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jTextField18, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton24, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap())
+                                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                        .addComponent(jLabel30)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jCheckBox1))
+                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                            .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                                .addComponent(jLabel27)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(jSpinner1, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                                    .addComponent(jLabel26)
+                                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                    .addComponent(jTextField18))
+                                                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                                        .addComponent(jLabel24)
+                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                        .addComponent(jTextField16, javax.swing.GroupLayout.PREFERRED_SIZE, 210, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                                                        .addComponent(jLabel25)
+                                                        .addGap(18, 18, 18)
+                                                        .addComponent(jTextField19, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                        .addGap(12, 12, 12)
+                                        .addComponent(jButton24, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)))))
+                .addGap(20, 20, 20))
         );
         BookEditDialogLayout.setVerticalGroup(
             BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(BookEditDialogLayout.createSequentialGroup()
-                .addGap(106, 106, 106)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel23))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(BookEditDialogLayout.createSequentialGroup()
+                        .addGap(106, 106, 106)
+                        .addComponent(jTextField17, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel23)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel24)
                     .addComponent(jTextField16, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel25)
                     .addComponent(jTextField19, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton24, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addGap(32, 32, 32)
-                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel27)
-                            .addComponent(jSpinner1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addGap(7, 7, 7)
-                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jTextField18, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel26))))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel26)
+                    .addComponent(jTextField18, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(21, 21, 21)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jSpinner1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel27))
+                .addGap(18, 18, 18)
                 .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel29))
-                .addGap(28, 28, 28)
+                .addGap(18, 18, 18)
                 .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel30)
                     .addComponent(jCheckBox1))
                 .addGap(18, 18, 18)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton22, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton23, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(105, Short.MAX_VALUE))
+                .addContainerGap(92, Short.MAX_VALUE))
         );
 
         jTable4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -1433,7 +1444,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addContainerGap(35, Short.MAX_VALUE))
         );
 
-        UserEditDialog.setPreferredSize(new java.awt.Dimension(450, 450));
         UserEditDialog.setSize(new java.awt.Dimension(450, 450));
 
         jLabel14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -1640,10 +1650,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addContainerGap(71, Short.MAX_VALUE))
         );
 
-        jLabel19.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        jLabel19.setText("Aktīvie izsniegumi");
+        ReturnLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        ReturnLabel.setText("Aktīvie izsniegumi");
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        ReturnTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null, null},
                 {null, null, null, null, null},
@@ -1654,16 +1664,16 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 "ID", "Lasitājs", "Grāmata", "Izsniegts", "Termiņš"
             }
         ));
-        jScrollPane1.setViewportView(jTable1);
-        if (jTable1.getColumnModel().getColumnCount() > 0) {
-            jTable1.getColumnModel().getColumn(3).setResizable(false);
+        jScrollPane1.setViewportView(ReturnTable);
+        if (ReturnTable.getColumnModel().getColumnCount() > 0) {
+            ReturnTable.getColumnModel().getColumn(3).setResizable(false);
         }
 
-        jButton18.setBackground(new java.awt.Color(204, 204, 204));
-        jButton18.setText("Atgriezt");
-        jButton18.addActionListener(new java.awt.event.ActionListener() {
+        ReturnButton.setBackground(new java.awt.Color(204, 204, 204));
+        ReturnButton.setText("Atgriezt");
+        ReturnButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton18ActionPerformed(evt);
+                ReturnButtonActionPerformed(evt);
             }
         });
 
@@ -1679,12 +1689,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                     .addGroup(ReturnDialogLayout.createSequentialGroup()
                         .addGap(25, 25, 25)
                         .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel19)
+                            .addComponent(ReturnLabel)
                             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 555, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGroup(ReturnDialogLayout.createSequentialGroup()
-                        .addGap(225, 225, 225)
-                        .addComponent(jButton18, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(26, 26, 26)
+                        .addGap(207, 207, 207)
+                        .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
                         .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(20, Short.MAX_VALUE))
         );
@@ -1692,13 +1702,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ReturnDialogLayout.createSequentialGroup()
                 .addGap(22, 22, 22)
-                .addComponent(jLabel19)
+                .addComponent(ReturnLabel)
                 .addGap(27, 27, 27)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 223, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 32, Short.MAX_VALUE)
                 .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton18, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(31, 31, 31))
         );
 
@@ -1845,33 +1855,33 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+    private void RegisterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton4ActionPerformed
+    }//GEN-LAST:event_RegisterButtonActionPerformed
 
-    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+    private void LoginButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoginButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton5ActionPerformed
+    }//GEN-LAST:event_LoginButtonActionPerformed
 
-    private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
+    private void CloseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CloseButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton6ActionPerformed
+    }//GEN-LAST:event_CloseButtonActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void CancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CancelButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_CancelButtonActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void RegisterButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterButton1ActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }//GEN-LAST:event_RegisterButton1ActionPerformed
 
     private void jButton15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton15ActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
     }//GEN-LAST:event_jButton15ActionPerformed
 
-    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+    private void NotificationsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NotificationsButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton3ActionPerformed
+    }//GEN-LAST:event_NotificationsButtonActionPerformed
 
     private void jTextField13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField13ActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
@@ -1921,9 +1931,13 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         // Actual navigation/database logic is wired in initializeApplication().
     }//GEN-LAST:event_jButton39ActionPerformed
 
-    private void jButton18ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton18ActionPerformed
+    private void ReturnButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ReturnButtonActionPerformed
         // Actual navigation/database logic is wired in initializeApplication().
-    }//GEN-LAST:event_jButton18ActionPerformed
+    }//GEN-LAST:event_ReturnButtonActionPerformed
+
+    private void jButton33ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton33ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton33ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1961,28 +1975,63 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JMenuBar ActionsMenuBar;
+    private javax.swing.JLabel AppLabel;
+    private javax.swing.JButton BookAddButton;
     private javax.swing.JDialog BookEditDialog;
+    private javax.swing.JButton BookListButton;
     private javax.swing.JDialog BookListDialog;
+    private javax.swing.JButton BookLoanButton;
+    private javax.swing.JMenu BookMenu;
+    private javax.swing.JButton BookReturnButton;
+    private javax.swing.JButton CancelButton;
+    private javax.swing.JButton CloseButton;
+    private javax.swing.JButton CloseButton1;
+    private javax.swing.JLabel EMailLabel;
+    private javax.swing.JTextField EMailTextField;
+    private javax.swing.JMenu FileMenu;
+    private javax.swing.JMenu HelpMenu;
     private javax.swing.JDialog LoanDialog;
+    private javax.swing.JMenu LoanMenu;
+    private javax.swing.JButton LoginButton;
     private javax.swing.JDialog LoginDialog;
     private javax.swing.JDialog MainDialog;
+    private javax.swing.JLabel NameLabel;
+    private javax.swing.JTextField NameTextField;
     private javax.swing.JDialog NotificationDialog;
+    private javax.swing.JMenu NotificationMenu;
+    private javax.swing.JButton NotificationsButton;
+    private javax.swing.JLabel PasswordLabel;
+    private javax.swing.JLabel PasswordLabel1;
+    private javax.swing.JLabel PasswordProveLabel;
+    private javax.swing.JTextField PasswordProveTextField;
+    private javax.swing.JTextField PasswordTextField;
+    private javax.swing.JTextField PasswordTextField1;
+    private javax.swing.JButton RegisterButton;
+    private javax.swing.JButton RegisterButton1;
     private javax.swing.JDialog RegisterDialog;
+    private javax.swing.JLabel RegisterLabel;
+    private javax.swing.JButton ReservationButton;
     private javax.swing.JDialog ReservationDialog;
+    private javax.swing.JMenu ReservationMenu;
+    private javax.swing.JButton ReturnButton;
     private javax.swing.JDialog ReturnDialog;
+    private javax.swing.JLabel ReturnLabel;
+    private javax.swing.JTable ReturnTable;
+    private javax.swing.JLabel SurnameLabel;
+    private javax.swing.JTextField SurnameTextField;
     private javax.swing.JDialog UserEditDialog;
+    private javax.swing.JButton UserListButton;
     private javax.swing.JDialog UserListFrameDialog;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton10;
-    private javax.swing.JButton jButton11;
-    private javax.swing.JButton jButton12;
-    private javax.swing.JButton jButton13;
+    private javax.swing.JMenu UserMenu;
+    private javax.swing.JLabel UsernameLabel;
+    private javax.swing.JLabel UsernameLabel1;
+    private javax.swing.JTextField UsernameTextField;
+    private javax.swing.JTextField UsernameTextField1;
     private javax.swing.JButton jButton15;
     private javax.swing.JButton jButton16;
     private javax.swing.JButton jButton17;
-    private javax.swing.JButton jButton18;
     private javax.swing.JButton jButton19;
-    private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton20;
     private javax.swing.JButton jButton21;
     private javax.swing.JButton jButton22;
@@ -1993,7 +2042,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JButton jButton27;
     private javax.swing.JButton jButton28;
     private javax.swing.JButton jButton29;
-    private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton30;
     private javax.swing.JButton jButton31;
     private javax.swing.JButton jButton32;
@@ -2004,13 +2052,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JButton jButton37;
     private javax.swing.JButton jButton38;
     private javax.swing.JButton jButton39;
-    private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton40;
-    private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton6;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
-    private javax.swing.JButton jButton9;
     private javax.swing.JCheckBox jCheckBox1;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JComboBox<String> jComboBox2;
@@ -2018,16 +2060,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> jComboBox4;
     private javax.swing.JFormattedTextField jFormattedTextField1;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
-    private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel12;
-    private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
     private javax.swing.JLabel jLabel15;
     private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel17;
     private javax.swing.JLabel jLabel18;
-    private javax.swing.JLabel jLabel19;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
@@ -2042,20 +2079,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel30;
     private javax.swing.JLabel jLabel31;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
-    private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
-    private javax.swing.JMenu jMenu3;
-    private javax.swing.JMenu jMenu4;
-    private javax.swing.JMenu jMenu5;
-    private javax.swing.JMenu jMenu6;
-    private javax.swing.JMenu jMenu7;
-    private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -2063,14 +2086,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JScrollPane jScrollPane6;
     private javax.swing.JSpinner jSpinner1;
-    private javax.swing.JTable jTable1;
     private javax.swing.JTable jTable2;
     private javax.swing.JTable jTable3;
     private javax.swing.JTable jTable4;
     private javax.swing.JTable jTable5;
     private javax.swing.JTextArea jTextArea1;
     private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField10;
     private javax.swing.JTextField jTextField11;
     private javax.swing.JTextField jTextField12;
     private javax.swing.JTextField jTextField13;
@@ -2082,12 +2103,5 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField19;
     private javax.swing.JTextField jTextField2;
     private javax.swing.JTextField jTextField20;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
-    private javax.swing.JTextField jTextField6;
-    private javax.swing.JTextField jTextField7;
-    private javax.swing.JTextField jTextField8;
-    private javax.swing.JTextField jTextField9;
     // End of variables declaration//GEN-END:variables
 }
