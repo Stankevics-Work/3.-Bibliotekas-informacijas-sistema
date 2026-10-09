@@ -255,6 +255,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         boolean staff = isStaff();
         boolean admin = isAdmin();
         boolean reader = isReader();
+        
         BookAddButton.setEnabled(staff);
         BookListButton.setEnabled(true);
         BookReturnButton.setEnabled(staff);
@@ -262,7 +263,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         UserListButton.setEnabled(staff);
         ReservationButton.setEnabled(staff || reader);
         NotificationsButton.setEnabled(true);
-        // Menus remain available visually, but action methods enforce the same permissions.
+        
+        // FIXED: Disable menus entirely for readers
+        UserMenu.setEnabled(staff);
+        LoanMenu.setEnabled(staff);
+        
         MainDialog.setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
     }
 
@@ -306,17 +311,19 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     private void registerUser() {
-        String vards = SurnameTextField.getText().trim();
-        String uzvards = NameTextField.getText().trim();
-        String username = PasswordTextField1.getText().trim();
-        String password = UsernameTextField1.getText();
+        String vards = NameTextField.getText().trim();        // FIXED: Was SurnameTextField
+        String uzvards = SurnameTextField.getText().trim();    // FIXED: Was NameTextField
+        String username = UsernameTextField1.getText().trim(); // FIXED: Was PasswordTextField1
+        String password = PasswordTextField1.getText();        // FIXED: Was UsernameTextField1
         String confirm = PasswordProveTextField.getText();
         String email = EMailTextField.getText().trim();
+        
         if (vards.isEmpty() || uzvards.isEmpty() || username.isEmpty() || password.isEmpty() || confirm.isEmpty() || email.isEmpty()) {
             showError(new IllegalArgumentException("Visi reģistrācijas lauki ir obligāti.")); return;
         }
         if (!password.equals(confirm)) { showError(new IllegalArgumentException("Paroles nesakrīt.")); return; }
         if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) { showError(new IllegalArgumentException("E-pasta adrese nav derīga.")); return; }
+        
         try {
             db(c -> {
                 LietotajsDAO dao = new LietotajsDAO(c);
@@ -409,14 +416,27 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         } catch (Exception ex) { showError(ex); }
     }
 
-    private void saveBook() {
+        private void saveBook() {
         if (!isStaff()) return;
         String title = jTextField17.getText().trim(); String author = jTextField16.getText().trim();
         String isbn = jTextField19.getText().trim(); String category = jTextField18.getText().trim();
         String description = jTextArea1.getText().trim();
+        
         if (title.isEmpty()) { showError(new IllegalArgumentException("Grāmatas nosaukums ir obligāts.")); return; }
+        if (title.length() > 255) { showError(new IllegalArgumentException("Nosaukums ir pārāk garš.")); return; }
+        
         Integer year = null; Object spin = jSpinner1.getValue();
-        if (spin instanceof Number && ((Number)spin).intValue() > 0) year = ((Number)spin).intValue();
+        if (spin instanceof Number && ((Number)spin).intValue() > 0) {
+            year = ((Number)spin).intValue();
+            int currentYear = java.time.LocalDate.now().getYear();
+            if (year > currentYear + 1) {
+                showError(new IllegalArgumentException("Izdošanas gads nevar būt nākotnē."));
+                return;
+            }
+        }
+        
+        boolean available = jCheckBox1.isSelected(); // <-- FIXED: Read checkbox state
+
         try {
             Integer finalYear = year;
             db(c -> {
@@ -424,12 +444,14 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 if (editingBookId < 0) {
                     Gramata b = new Gramata(); b.setNosaukums(title); b.setAutors(author.isEmpty()?null:author);
                     b.setIsbn(isbn.isEmpty()?null:isbn); b.setKategorija(category.isEmpty()?null:category); b.setApraksts(description.isEmpty()?null:description); b.setIzdosanasGads(finalYear);
+                    b.setPieejamiba(available); // <-- FIXED: Save availability
                     books.insert(b);
-                    // A newly created book receives one available physical copy so availability is immediately usable.
+                    
                     Eksemplars copy = new Eksemplars(); copy.setGramata(b); copy.setBiblioteka(DEFAULT_LIBRARY); copy.setStatus("pieejams"); new EksemplarsDAO(c).insert(copy);
                 } else {
                     Gramata b = books.findById(editingBookId); if (b == null) throw new SQLException("Grāmata nav atrasta.");
                     b.setNosaukums(title); b.setAutors(author.isEmpty()?null:author); b.setIsbn(isbn.isEmpty()?null:isbn); b.setKategorija(category.isEmpty()?null:category); b.setApraksts(description.isEmpty()?null:description); b.setIzdosanasGads(finalYear);
+                    b.setPieejamiba(available); // <-- FIXED: Update availability
                     books.update(b);
                 }
                 return null;
@@ -529,6 +551,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         if(!isStaff())return; int ri=jComboBox3.getSelectedIndex(), ci=jComboBox2.getSelectedIndex(); if(ri<0||ci<0){showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));return;}
         LocalDate due=parseDueDate(String.valueOf(jFormattedTextField1.getValue())); if(due==null)return;
         try{Lietotajs u=loanReaders.get(ri);Eksemplars copy=loanCopies.get(ci);Izsniegums loan=new Izsniegums();loan.setLietotajs(u);loan.setEksemplars(copy);loan.setTermins(Timestamp.valueOf(due.atTime(23,59,59)));db(c->{new IzsniegumsDAO(c).insert(loan);return null;});JOptionPane.showMessageDialog(LoanDialog,"Grāmata izsniegta.","LibInfo",JOptionPane.INFORMATION_MESSAGE);returnToMain(LoanDialog);}catch(Exception ex){showError(ex);}
+        if (due == null) return;
+        if (due.isBefore(LocalDate.now())) { 
+            showError(new IllegalArgumentException("Termiņš nevar būt pagātnē.")); 
+            return; 
+        }
     }
     private LocalDate parseDueDate(String value){try{return LocalDate.parse(value,DATE_FORMAT);}catch(DateTimeParseException ex){showError(new IllegalArgumentException("Termiņam jābūt formātā GGGG-MM-DD."));return null;}}
 
@@ -969,7 +996,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        MainDialog.setPreferredSize(new java.awt.Dimension(470, 220));
         MainDialog.setResizable(false);
         MainDialog.setSize(new java.awt.Dimension(470, 220));
 
@@ -1135,7 +1161,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         jComboBox4.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         jButton38.setBackground(new java.awt.Color(204, 204, 204));
-        jButton38.setText("Aizvért");
+        jButton38.setText("Aizvērt");
+        jButton38.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton38ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout BookListDialogLayout = new javax.swing.GroupLayout(BookListDialog.getContentPane());
         BookListDialog.getContentPane().setLayout(BookListDialogLayout);
@@ -1938,6 +1969,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void jButton33ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton33ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton33ActionPerformed
+
+    private void jButton38ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton38ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton38ActionPerformed
 
     /**
      * @param args the command line arguments
