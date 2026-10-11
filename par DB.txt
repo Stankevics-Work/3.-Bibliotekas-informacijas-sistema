@@ -1,0 +1,8 @@
+Datu bāze ir Embedded, tāpēc tā automatiski neparadīsies Services, bet lai to atvērtu:
+Databses > New Connection > Driver - New Driver > izvēlieties derby.jar no projekta mapes > Database : ceļš līdz 3.-Bibliotekas-informacijas-sistema-main\lib_db un talāk ka parasti
+
+4 pamata lietotāji ar dažadu funkcionālu:
+Administrators	admin	admin123
+Bibliotekārs	bibliotekars	Test123!
+Lasītājs	lasitajs	Test123!
+Autors	autors	Test123!
