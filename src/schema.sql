@@ -10,6 +10,16 @@ CREATE TABLE lietotajs (
     CHECK (loma IN ('ADMIN', 'LIBRARIAN', 'READER', 'AUTHOR'))
 );
 
+CREATE TABLE pazinojums_izlasits (
+    lietotaja_id INTEGER NOT NULL REFERENCES lietotajs(lietotaja_id) ON DELETE CASCADE,
+    tips VARCHAR(20) NOT NULL,
+    pazinojuma_id INTEGER NOT NULL,
+    izlasits_datums TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (lietotaja_id, tips, pazinojuma_id),
+    CHECK (tips IN ('loan', 'reservation')),
+    CHECK (pazinojuma_id > 0)
+);
+
 CREATE TABLE gramata (
     gramatas_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nosaukums VARCHAR(200) NOT NULL,

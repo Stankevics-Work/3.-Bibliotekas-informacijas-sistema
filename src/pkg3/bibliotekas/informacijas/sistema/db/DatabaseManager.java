@@ -4,51 +4,47 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.sql.*;
-import pkg3.bibliotekas.informacijas.sistema.dao.EksemplarsDAO;
-import pkg3.bibliotekas.informacijas.sistema.dao.GramataDAO;
-import pkg3.bibliotekas.informacijas.sistema.dao.LietotajsDAO;
-import pkg3.bibliotekas.informacijas.sistema.model.Eksemplars;
-import pkg3.bibliotekas.informacijas.sistema.model.Gramata;
-import pkg3.bibliotekas.informacijas.sistema.model.Lietotajs;
-import pkg3.bibliotekas.informacijas.sistema.model.Loma;
-import pkg3.bibliotekas.informacijas.sistema.util.PasswordUtil;
 
-/** Derby savienojuma pārvaldība, shēmas izveide un sākotnējo datu sagatavošana. */
+/** Derby savienojuma pārvaldība un shēmas izveide/migrācija. */
 public final class DatabaseManager {
     private static final String DB_PATH = "lib_db";
     private static final String[] TABLES = {"LIETOTAJS", "GRAMATA", "EKSEMPLARS", "IZSNIEGUMS", "REZERVACIJA"};
 
-    // Visi dati, kas bija pārnestajā projekta DB. Admina parole apzināti nomainīta uz admin123.
-    private static final String LEGACY_HASH = "$2a$12$S/4iFvK26WWpHziepOKIFe94sUJ1SOmNnnegW0jz/MDXobmpJHmke";
-    private static final String ADMIN_HASH = "$2a$12$MvTNcSrTUIANNWjhVRdkke7aL.6jpHRdzhTMG3CnQnRt/uq8wACkq";
-
     private DatabaseManager() { }
 
     /**
-     * Atgriež mapi, kurā atrodas pati programma (JAR fails vai build/classes mape).
-     * Nodrošina, ka lib_db vienmēr tiek meklēta/veidota blakus programmai, nevis atkarībā
-     * no tā, no kuras mapes programma tiek palaista (darba direktorijas).
+     * Atrod lietotnes pamatmapi, lai datubāze neatrastos pagaidu build/ vai dist/ mapē.
+     * Tādējādi "ant clean" neizdzēš lietotāja datus. Instalētam atsevišķam JAR fallback
+     * gadījumā datubāze tiek glabāta blakus JAR failam.
      */
     private static Path getApplicationDirectory() {
         try {
             Path location = Paths.get(DatabaseManager.class.getProtectionDomain()
                     .getCodeSource().getLocation().toURI());
-            if (Files.isRegularFile(location)) {
-                // Palaists no JAR faila -> izmanto JAR faila mapi
-                return location.getParent();
+            Path base = Files.isRegularFile(location) ? location.getParent() : location;
+            if (base == null) return Paths.get(".").toAbsolutePath();
+
+            // NetBeans/Ant: .../build/classes -> projekta sakne.
+            if (base.getFileName() != null && "classes".equals(base.getFileName().toString())
+                    && base.getParent() != null && base.getParent().getFileName() != null
+                    && "build".equals(base.getParent().getFileName().toString())) {
+                Path candidate = base.getParent().getParent();
+                if (candidate != null && Files.isRegularFile(candidate.resolve("build.xml"))) return candidate;
             }
-            // Palaists no .class failiem (piem., NetBeans build/classes) -> izmanto šo mapi
-            return location;
+            // Izplatītā JAR: .../dist/app.jar -> projekta sakne, ja pieejama.
+            if (base.getFileName() != null && "dist".equals(base.getFileName().toString())) {
+                Path candidate = base.getParent();
+                if (candidate != null && Files.isRegularFile(candidate.resolve("build.xml"))) return candidate;
+            }
+            return base;
         } catch (Exception ex) {
-            // Fallback: ja nevar noteikt, izmanto darba direktoriju
             return Paths.get(".").toAbsolutePath();
         }
     }
 
     /**
-     * Atver vienīgo projekta Derby datubāzi lib_db mapē.
-     * Ja mape vai DB vēl neeksistē, Derby tās automātiski izveido.
-     * Datubāze vienmēr tiek meklēta blakus programmai, tāpēc tā ceļo līdzi projektam.
+     * Atver projekta Derby datubāzi lib_db mapē. Ja DB vēl neeksistē, Derby to izveido.
+     * Ceļš ir stabils arī pēc build tīrīšanas; to var pārrakstīt ar -Dlibinfo.db.path=...
      */
     public static Connection getConnection() throws SQLException {
         String override = System.getProperty("libinfo.db.path");
@@ -95,6 +91,7 @@ public final class DatabaseManager {
                 s.executeQuery("SELECT pieejamiba FROM gramata WHERE 1=0").close();
                 s.executeQuery("SELECT * FROM gramatu_katalogs WHERE 1=0").close();
             }
+            ensureNotificationReadTable(c);
             return;
         }
         if (present != 0) throw new SQLException("Datubāzes shēma ir nepilnīga, pārbaudiet tabulas");
@@ -122,131 +119,21 @@ public final class DatabaseManager {
         } finally {
             c.setAutoCommit(true);
         }
+        ensureNotificationReadTable(c);
     }
 
-    /**
-     * Pirmās palaišanas laikā nodrošina visas sākotnējās lietotnes datu rindas.
-     * Metode ir idempotenta: esošie dati netiek dublēti vai dzēsti.
-     */
-    public static synchronized void seedInitialData(Connection c) throws SQLException {
-        if (!c.getAutoCommit()) throw new SQLException("Sākotnējo datu ievietošanai vajadzīgs autoCommit=true");
-
-        LietotajsDAO users = new LietotajsDAO(c);
-        ensureUser(c, users, "Anna", "Ozola", "admin", ADMIN_HASH, "admin@example.com", Loma.ADMIN, true);
-        ensureUser(c, users, "Ilze", "Kalnina", "bibliotekars", LEGACY_HASH, "library@example.com", Loma.LIBRARIAN, false);
-        ensureUser(c, users, "Janis", "Berzins", "lasitajs", LEGACY_HASH, "reader@example.com", Loma.READER, false);
-        ensureUser(c, users, "Mara", "Liepa", "autors", LEGACY_HASH, "author@example.com", Loma.AUTHOR, false);
-
-        int book1 = ensureBook(c, "Mazais celojums", "Stasts par celojumu.", 2024, "Stasti", null, "Mara Liepa", true);
-        int book2 = ensureBook(c, "Java pamati", "Ievads programmesana.", 2025, "Macibu literatura", null, "Peteris Ozols", false);
-
-        int copy1 = ensureCopy(c, book1, "DTTT biblioteka", "pieejams");
-        int copy2 = ensureCopy(c, book2, "DTTT biblioteka", "izsniegts");
-
-        int readerId = users.findByUsername("lasitajs").getLietotajaId();
-        ensureLoan(c, readerId, copy2,
-                Timestamp.valueOf("2026-10-01 10:24:11.879"),
-                Timestamp.valueOf("2026-10-15 10:24:11.879"));
-        ensureReservation(c, readerId, book1,
-                Timestamp.valueOf("2026-10-01 10:24:11.916"), "akt\u012bva");
-    }
-
-    private static void ensureUser(Connection c, LietotajsDAO users, String firstName, String lastName,
-                                   String username, String passwordHash, String email, Loma role,
-                                   boolean forceAdminPassword) throws SQLException {
-        Lietotajs existing = users.findByUsername(username);
-        if (existing == null) {
-            try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma, izveidots) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    Statement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, firstName);
-                ps.setString(2, lastName);
-                ps.setString(3, username);
-                ps.setString(4, passwordHash);
-                ps.setString(5, email);
-                ps.setString(6, role.name());
-                ps.setTimestamp(7, Timestamp.valueOf("2026-10-01 10:24:11.843"));
-                ps.executeUpdate();
-            }
-            return;
+    /** Atpakaļsaderīga shēmas migrācija vecākām instalācijām. */
+    private static void ensureNotificationReadTable(Connection c) throws SQLException {
+        try (ResultSet rs = c.getMetaData().getTables(null, "APP", "PAZINOJUMS_IZLASITS", new String[]{"TABLE"})) {
+            if (rs.next()) return;
         }
-        if (forceAdminPassword && !PasswordUtil.verify("admin123", existing.getParole())) {
-            try (PreparedStatement ps = c.prepareStatement("UPDATE lietotajs SET parole = ? WHERE lietotaja_id = ?")) {
-                ps.setString(1, passwordHash);
-                ps.setInt(2, existing.getLietotajaId());
-                ps.executeUpdate();
-            }
-        }
-    }
-
-    private static int ensureBook(Connection c, String title, String description, Integer year,
-                                  String category, String isbn, String author, boolean available) throws SQLException {
-        try (PreparedStatement ps = c.prepareStatement("SELECT gramatas_id FROM gramata WHERE nosaukums = ?")) {
-            ps.setString(1, title);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        }
-        try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO gramata (nosaukums, apraksts, izdosanas_gads, kategorija, isbn, autors, pieejamiba) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, title);
-            ps.setString(2, description);
-            if (year == null) ps.setNull(3, Types.INTEGER); else ps.setInt(3, year);
-            ps.setString(4, category);
-            if (isbn == null) ps.setNull(5, Types.VARCHAR); else ps.setString(5, isbn);
-            ps.setString(6, author);
-            ps.setBoolean(7, available);
-            ps.executeUpdate();
-            try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (!keys.next()) throw new SQLException("Neizdevās iegūt grāmatas ID");
-                return keys.getInt(1);
-            }
-        }
-    }
-
-    private static int ensureCopy(Connection c, int bookId, String library, String status) throws SQLException {
-        try (PreparedStatement ps = c.prepareStatement("SELECT eksemplara_id FROM eksemplars WHERE gramatas_id = ? ORDER BY eksemplara_id")) {
-            ps.setInt(1, bookId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        }
-        try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO eksemplars (gramatas_id, biblioteka, status) VALUES (?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, bookId);
-            ps.setString(2, library);
-            ps.setString(3, status);
-            ps.executeUpdate();
-            try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (!keys.next()) throw new SQLException("Neizdevās iegūt eksemplāra ID");
-                return keys.getInt(1);
-            }
-        }
-    }
-
-    private static void ensureLoan(Connection c, int userId, int copyId, Timestamp issued, Timestamp due) throws SQLException {
-        try (PreparedStatement ps = c.prepareStatement(
-                "SELECT 1 FROM izsniegums WHERE lietotaja_id = ? AND eksemplara_id = ? AND izsniegts = ?")) {
-            ps.setInt(1, userId); ps.setInt(2, copyId); ps.setTimestamp(3, issued);
-            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return; }
-        }
-        try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO izsniegums (lietotaja_id, eksemplara_id, izsniegts, termins, atgriezts) VALUES (?, ?, ?, ?, NULL)")) {
-            ps.setInt(1, userId); ps.setInt(2, copyId); ps.setTimestamp(3, issued); ps.setTimestamp(4, due); ps.executeUpdate();
-        }
-    }
-
-    private static void ensureReservation(Connection c, int userId, int bookId, Timestamp date, String status) throws SQLException {
-        try (PreparedStatement ps = c.prepareStatement(
-                "SELECT 1 FROM rezervacija WHERE lietotaja_id = ? AND gramatas_id = ? AND datums = ?")) {
-            ps.setInt(1, userId); ps.setInt(2, bookId); ps.setTimestamp(3, date);
-            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return; }
-        }
-        try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO rezervacija (lietotaja_id, gramatas_id, datums, statuss) VALUES (?, ?, ?, ?)")) {
-            ps.setInt(1, userId); ps.setInt(2, bookId); ps.setTimestamp(3, date); ps.setString(4, status); ps.executeUpdate();
+        try (Statement statement = c.createStatement()) {
+            statement.executeUpdate("CREATE TABLE pazinojums_izlasits ("
+                    + "lietotaja_id INTEGER NOT NULL REFERENCES lietotajs(lietotaja_id) ON DELETE CASCADE, "
+                    + "tips VARCHAR(20) NOT NULL, pazinojuma_id INTEGER NOT NULL, "
+                    + "izlasits_datums TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, "
+                    + "PRIMARY KEY (lietotaja_id, tips, pazinojuma_id), "
+                    + "CHECK (tips IN ('loan', 'reservation')), CHECK (pazinojuma_id > 0))");
         }
     }
 

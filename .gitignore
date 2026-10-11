@@ -7,7 +7,6 @@
 .env
 
 /lib_db/*
-!/lib_db/README.txt
+!/lib_db/README_DO_NOT_TOUCH_FILES.txt
 derby.log
-derby.log 
-derby.log 
+hs_err_pid*.log

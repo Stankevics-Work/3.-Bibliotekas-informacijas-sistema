@@ -16,6 +16,7 @@ public class DatabaseIntegrationTest {
     private Connection connection;
     private Path db;
     private String previousPath;
+    private Lietotajs actor;
 
     @Before public void prepare() throws Exception {
         db = Files.createTempDirectory("libinfo-test-").resolve("db");
@@ -56,10 +57,21 @@ public class DatabaseIntegrationTest {
         new EksemplarsDAO(connection).insert(value); return value;
     }
 
+    private Lietotajs actor() throws SQLException {
+        if (actor == null) {
+            actor = new Lietotajs();
+            actor.setVards("Testa"); actor.setUzvards("Bibliotekārs");
+            actor.setLietotajvards("test_bibliotekars"); actor.setEpasts("test_bibliotekars@example.com");
+            actor.setParole(PasswordUtil.hash("Test123!")); actor.setLoma(Loma.LIBRARIAN);
+            new LietotajsDAO(connection).insert(actor);
+        }
+        return actor;
+    }
+
     private Izsniegums loan(Lietotajs reader, Eksemplars copy) throws SQLException {
         Izsniegums value = new Izsniegums(); value.setLietotajs(reader);
         value.setEksemplars(copy); value.setTermins(new Date(System.currentTimeMillis() + 86400000L));
-        new IzsniegumsDAO(connection).insert(value); return value;
+        new IzsniegumsDAO(connection).insert(value, actor()); return value;
     }
 
     @Test public void initializationAndPersistence() throws Exception {
@@ -75,6 +87,78 @@ public class DatabaseIntegrationTest {
         assertEquals("Saglabata gramata", new GramataDAO(connection).findById(value.getGramatasId()).getNosaukums());
         assertEquals(1, new GramataDAO(connection).findAll().size());
         assertNull(new GramataDAO(connection).findById(Integer.MAX_VALUE));
+    }
+
+    @Test public void startupKeepsChangedAdminPasswordAndSeedDataStable() throws Exception {
+        LietotajsDAO users = new LietotajsDAO();
+        users.initializeDatabase();
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        assertNotNull("Sākotnējā administratora kontam jābūt izveidotam", admin);
+
+        String changedPassword = "AdminChanged123!";
+        admin.setParole(PasswordUtil.hash(changedPassword));
+        assertTrue(new LietotajsDAO(connection).update(admin));
+
+        // Atkārtota inicializācija nedrīkst atiestatīt paroli vai dublēt demonstrācijas datus.
+        users.initializeDatabase();
+        Lietotajs saved = new LietotajsDAO(connection).findByUsername("admin");
+        assertTrue("Administratora nomainītajai parolei jāsaglabājas", PasswordUtil.verify(changedPassword, saved.getParole()));
+        assertEquals("Inicializācijai nevajadzētu dublēt sākotnējos izsniegumus", 1, new IzsniegumsDAO(connection).findAll().size());
+        assertEquals("Inicializācijai nevajadzētu dublēt sākotnējās rezervācijas", 1, new RezervacijaDAO(connection).findAll().size());
+
+        Lietotajs authenticated = users.authenticate("admin", changedPassword);
+        assertNull("Autentificētās sesijas objektā nav jāglabā paroles jaucējvērtība", authenticated.getParole());
+    }
+
+    @Test public void startupDoesNotRecreateRenamedSeedAccounts() throws Exception {
+        LietotajsDAO users = new LietotajsDAO();
+        users.initializeDatabase();
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        assertNotNull(admin);
+        admin.setLietotajvards("mainitais_admin");
+        assertTrue(new LietotajsDAO(connection).update(admin));
+
+        users.initializeDatabase();
+        assertNull("Pārdēvēto kontu nedrīkst aizvietot ar noklusēto administratoru",
+                new LietotajsDAO(connection).findByUsername("admin"));
+        Lietotajs renamed = new LietotajsDAO(connection).findByUsername("mainitais_admin");
+        assertNotNull(renamed);
+        assertEquals(Loma.ADMIN, renamed.getLoma());
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT COUNT(*) FROM lietotajs WHERE loma = 'ADMIN'");
+             ResultSet rs = ps.executeQuery()) {
+            assertTrue(rs.next());
+            assertEquals("Pēc atkārtotas inicializācijas nedrīkst dublēt administratoru", 1, rs.getInt(1));
+        }
+    }
+
+    @Test public void cannotRemoveOwnAdminRoleAndMalformedPasswordHashesFailClosed() throws Exception {
+        LietotajsDAO users = new LietotajsDAO();
+        users.initializeDatabase();
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        assertNotNull(admin);
+        try {
+            users.changeUserRole(admin.getLietotajaId(), Loma.READER, admin);
+            fail("Administratoram nedrīkst atņemt pašam savu lomu");
+        } catch (IllegalArgumentException expected) { }
+        Lietotajs selfEdit = new Lietotajs();
+        selfEdit.setVards(admin.getVards()); selfEdit.setUzvards(admin.getUzvards());
+        selfEdit.setLietotajvards(admin.getLietotajvards()); selfEdit.setEpasts(admin.getEpasts());
+        selfEdit.setLoma(Loma.READER);
+        try {
+            users.saveManagedUser(selfEdit, admin.getLietotajaId(), "", admin);
+            fail("Administratoram nedrīkst mainīt pašam savu lomu ar lietotāja rediģēšanas formu");
+        } catch (IllegalArgumentException expected) { }
+        assertFalse(PasswordUtil.verify("anything", "not-a-bcrypt-hash"));
+        assertFalse(PasswordUtil.verify(null, "$2a$12$invalid"));
+        try {
+            PasswordUtil.hash("   ");
+            fail("Tukšu vai tikai atstarpju paroli nedrīkst jaukt");
+        } catch (IllegalArgumentException expected) { }
+        try {
+            PasswordUtil.hash("a".repeat(73));
+            fail("BCrypt ievades garums nedrīkst pārsniegt 72 UTF-8 baitus");
+        } catch (IllegalArgumentException expected) { }
     }
 
     @Test public void crudAndLoanLifecycle() throws Exception {
@@ -135,6 +219,104 @@ public class DatabaseIntegrationTest {
         r2.setStatuss("atcelta"); assertTrue(dao.update(r2));
         assertTrue(dao.findActive().isEmpty());
         assertTrue(dao.delete(r1.getRezervacijasId())); assertTrue(dao.delete(r2.getRezervacijasId()));
+    }
+
+    @Test public void existingFiveDaosDriveCompleteWorkflow() throws Exception {
+        LietotajsDAO userDao = new LietotajsDAO();
+        GramataDAO bookDao = new GramataDAO();
+        EksemplarsDAO copyDao = new EksemplarsDAO();
+        IzsniegumsDAO loanDao = new IzsniegumsDAO();
+        RezervacijaDAO reservationDao = new RezervacijaDAO();
+
+        userDao.initializeDatabase();
+        // Emulē vecāku DB versiju: startēšanas laikā atjauno tikai nolasīto paziņojumu tabulu.
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("DROP TABLE pazinojums_izlasits");
+        }
+        userDao.initializeDatabase();
+
+        Lietotajs librarian = new LietotajsDAO(connection).findByUsername("bibliotekars");
+        assertNotNull("Sākotnējā bibliotekāra kontam jābūt izveidotam", librarian);
+        Lietotajs reader = userDao.registerUser("Testa", "Lasītājs", "dao_workflow_reader",
+                "Password123!", "Password123!", "dao_workflow_reader@example.com");
+        assertNotNull(reader);
+        assertEquals(reader.getLietotajaId(), userDao.authenticate("dao_workflow_reader", "Password123!").getLietotajaId());
+
+        Gramata form = new Gramata();
+        form.setNosaukums("DAO darbplūsmas grāmata");
+        form.setAutors("Māra Liepa");
+        form.setKategorija("Testi");
+        form.setApraksts("Pārbauda darbības caur piecām esošajām DAO klasēm.");
+        form.setIzdosanasGads(java.time.LocalDate.now().getYear());
+        Gramata saved = bookDao.saveBook(form, -1, true, librarian);
+        assertNotNull(saved);
+        assertTrue("Jaunajai grāmatai jābūt pieejamai pēc eksemplāra pievienošanas", saved.isPieejama());
+
+        Eksemplars copy = null;
+        for (Eksemplars candidate : copyDao.findAvailableCopies(librarian)) {
+            if (candidate.getGramata() != null && candidate.getGramata().getGramatasId() == saved.getGramatasId()) {
+                copy = candidate;
+                break;
+            }
+        }
+        assertNotNull("DAO jāsaglabā un jāatgriež eksemplārs", copy);
+        loanDao.issueBook(reader.getLietotajaId(), copy.getEksemplaraId(),
+                java.time.LocalDate.now().plusDays(7).toString(), librarian);
+
+        Izsniegums activeLoan = null;
+        for (Izsniegums candidate : loanDao.findLoans(false, librarian)) {
+            if (candidate.getEksemplars() != null && candidate.getEksemplars().getEksemplaraId() == copy.getEksemplaraId()) {
+                activeLoan = candidate;
+                break;
+            }
+        }
+        assertNotNull("Izsniegšanai jābūt redzamai aktīvo izsniegumu sarakstā", activeLoan);
+        loanDao.returnLoan(activeLoan.getIzsniegumaId(), librarian);
+        for (Izsniegums candidate : loanDao.findLoans(false, librarian)) {
+            assertFalse("Atgrieztais eksemplārs vairs nedrīkst būt aktīvs", candidate.getIzsniegumaId() == activeLoan.getIzsniegumaId());
+        }
+
+        reservationDao.createReservation(saved.getGramatasId(), reader);
+        Rezervacija created = null;
+        for (Rezervacija reservation : reservationDao.findReservations(reader)) {
+            if (reservation.getGramata() != null && reservation.getGramata().getGramatasId() == saved.getGramatasId()) {
+                created = reservation;
+                break;
+            }
+        }
+        assertNotNull("Jauna rezervācija jāsaglabā Derby datubāzē", created);
+        assertEquals("aktīva", created.getStatuss());
+        for (Gramata selectable : reservationDao.findReservationBooks(reader)) {
+            assertNotEquals("Grāmatu ar jau aktīvu rezervāciju nedrīkst piedāvāt otrreiz",
+                    saved.getGramatasId(), selectable.getGramatasId());
+        }
+        userDao.markNotificationRead("reservation", created.getRezervacijasId(), reader);
+        assertTrue("Izlasīšanas statuss jāsaglabā Derby un jāielādē atkārtoti",
+                userDao.findReadNotificationKeys(reader).contains("reservation:" + created.getRezervacijasId()));
+
+        // Vecākās instalācijās aktīvais statuss var būt saglabāts bez diakritiskās zīmes.
+        assertTrue("DAO atpazīst arī veco aktiva statusu", RezervacijaDAO.isActiveStatus("aktiva"));
+        reservationDao.cancelReservation(created.getRezervacijasId(), reader);
+        boolean cancellationPersisted = false;
+        for (Rezervacija reservation : reservationDao.findReservations(reader)) {
+            if (reservation.getRezervacijasId() == created.getRezervacijasId()) {
+                cancellationPersisted = "atcelta".equals(reservation.getStatuss());
+                break;
+            }
+        }
+        assertTrue("Rezervācijas atcelšana jāsaglabā datubāzē", cancellationPersisted);
+        boolean selectableAgain = false;
+        for (Gramata selectable : reservationDao.findReservationBooks(reader)) {
+            if (selectable.getGramatasId() == saved.getGramatasId()) selectableAgain = true;
+        }
+        assertTrue("Pēc atcelšanas grāmata atkal ir pieejama jaunai rezervācijai", selectableAgain);
+        assertTrue("Grāmatu meklēšanai jāizmanto DAO", !bookDao.searchBooks("DAO darbplūsmas grāmata", "Visas grāmatas", librarian).isEmpty());
+        assertTrue("Lietotāju meklēšanai jāizmanto DAO", !userDao.searchUsers("dao_workflow_reader", librarian).isEmpty());
+        Lietotajs author = new LietotajsDAO(connection).findByUsername("autors");
+        try {
+            loanDao.findNotificationLoans(author);
+            fail("Autora lomai nevajadzētu redzēt citu lietotāju paziņojumus");
+        } catch (SecurityException expected) { }
     }
 
     @Test public void overdueAndConstraints() throws Exception {
