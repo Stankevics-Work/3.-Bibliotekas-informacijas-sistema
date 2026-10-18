@@ -1,9 +1,5 @@
 package bibliotekas_informacijas_sistema.dao;
 
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Rezervacija;
-import bibliotekas_informacijas_sistema.model.Izsniegums;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -25,6 +21,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import bibliotekas_informacijas_sistema.db.DatabaseManager;
+import bibliotekas_informacijas_sistema.model.*;
 import bibliotekas_informacijas_sistema.util.PasswordUtil;
 import static bibliotekas_informacijas_sistema.util.PasswordUtil.*;
 
@@ -337,6 +334,9 @@ public class LietotajsDAO {
             LietotajsDAO users = new LietotajsDAO(connection);
             Lietotajs value = editingId < 0 ? new Lietotajs() : users.findById(editingId);
             if (value == null) throw new SQLException("Lietotājs nav atrasts.");
+            if (editingId >= 0 && actor.getLoma() != Loma.ADMIN && value.getLoma() != Loma.READER) {
+                throw new SecurityException("Bibliotekārs drīkst rediģēt tikai lasītāju kontus.");
+            }
             String username = form.getLietotajvards().trim();
             String email = form.getEpasts().trim();
             if (users.existsByUsername(username, editingId)) throw new SQLException("Lietotājvārds jau ir aizņemts.");

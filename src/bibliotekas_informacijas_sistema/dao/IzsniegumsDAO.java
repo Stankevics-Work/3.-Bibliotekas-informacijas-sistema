@@ -1,11 +1,5 @@
 package bibliotekas_informacijas_sistema.dao;
 
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Rezervacija;
-import bibliotekas_informacijas_sistema.model.Gramata;
-import bibliotekas_informacijas_sistema.model.Izsniegums;
-import bibliotekas_informacijas_sistema.model.Eksemplars;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +7,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import bibliotekas_informacijas_sistema.db.DatabaseManager;
+import bibliotekas_informacijas_sistema.model.*;
 import static bibliotekas_informacijas_sistema.util.PasswordUtil.*;
 
 /** Izsniegums datu piekļuve ar parametrizētiem JDBC vaicājumiem */

@@ -10,12 +10,7 @@ package bibliotekas_informacijas_sistema;
  * @author user
  */
 
-import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.EventQueue;
-import java.awt.Font;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -51,6 +46,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private final RezervacijaDAO rezervacijaDAO = new RezervacijaDAO();
     private Lietotajs currentUser;
     private int editingBookId = -1;
+    private Integer originalBookYear;
+    private boolean bookYearEdited;
     private int editingUserId = -1;
     private final Set<String> readNotificationKeys = new HashSet<>();
     private final List<Lietotajs> loanReaders = new ArrayList<>();
@@ -58,17 +55,210 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private final List<Gramata> reservationBooks = new ArrayList<>();
     private boolean filterComboInitialized = false;
     private boolean suppressFilterAction = false;
-    private javax.swing.JMenuItem menuAddBookItem;
-    private javax.swing.JMenuItem menuAddUserItem;
 
-    // ==================== UZNĒMĒJDARBĪBAS LOĢIKA (paliek kā metodes) ====================
+    /** Initializes application state after the NetBeans-generated components have been created. */
+    private void initializeApplication() {
+        setVisible(false); // Vispirms tiek parādīts pieteikšanās dialogs.
+        configureDialogs();
+        configureMenus();
+        BookTable.getModel().addTableModelListener(e -> BookListDialogStatusLabel.setText("Kopā: " + BookTable.getRowCount() + " grāmatas"));
+        UserTable.getModel().addTableModelListener(e -> UserListFrameDialogStatusLabel.setText("Kopā: " + UserTable.getRowCount() + " lietotāji"));
+        ReservationTable.getModel().addTableModelListener(e -> ReservationDialogStatusLabel.setText("Kopā: " + ReservationTable.getRowCount() + " rezervācijas"));
+        NotificationTable.getModel().addTableModelListener(e -> NotificationDialogStatusLabel.setText("Kopā: " + NotificationTable.getRowCount() + " paziņojumi"));
+        for (JDialog dialog : allDialogs()) dialog.pack();
+        try {
+            lietotajsDAO.initializeDatabase();
+        } catch (Exception ex) {
+            showError(ex);
+        }
+        UsernameTextField.setText("");
+        PasswordTextField.setText("");
+        showLogin();
+    }
+
+    private void configureDialogs() {
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); } });
+        LoginDialog.setTitle("LibInfo - Pieteikšanās");
+        RegisterDialog.setTitle("LibInfo - Reģistrācija");
+        setTitle("LibInfo - Galvenā izvēlne");
+        BookListDialog.setTitle("LibInfo - Grāmatu saraksts");
+        BookEditDialog.setTitle("LibInfo - Grāmata");
+        UserListFrameDialog.setTitle("LibInfo - Lietotāji");
+        UserEditDialog.setTitle("LibInfo - Lietotājs");
+        LoanDialog.setTitle("LibInfo - Izsniegt grāmatu");
+        ReturnDialog.setTitle("LibInfo - Atgriezt grāmatu");
+        ReservationDialog.setTitle("LibInfo - Rezervācijas");
+        NotificationDialog.setTitle("LibInfo - Paziņojumi");
+        LoginDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); } });
+        RegisterDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); } });
+        BookListDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListDialog); } });
+        BookEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookEditDialog); } });
+        UserListFrameDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameDialog); } });
+        UserEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserEditDialog); } });
+        LoanDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanDialog); } });
+        ReturnDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnDialog); } });
+        ReservationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationDialog); } });
+        NotificationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); } });
+        for (JDialog d : allDialogs()) {
+            d.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+            d.setModal(false);
+        }
+        // Sarakstu logi ir pārdimensionējami; ievades logi izmanto visu komponentēm vajadzīgo izmēru.
+        BookListDialog.setResizable(true);
+        UserListFrameDialog.setResizable(true);
+        ReturnDialog.setResizable(true);
+        ReservationDialog.setResizable(true);
+        NotificationDialog.setResizable(true);
+
+        int currentYear = java.time.LocalDate.now().getYear();
+        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
+        BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
+        ((javax.swing.JSpinner.DefaultEditor) BookYearSpinner.getEditor()).getTextField()
+                .getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+        });
+        BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
+        LoanDateTextField.setEditable(false);
+        LoanDateTextField.setToolTipText("Sistēma automātiski reģistrē izsniegšanas datumu.");
+
+        // Termiņa lauka maska: GGGG-MM-DD formāts
+        try {
+            javax.swing.text.MaskFormatter loanMask =
+                new javax.swing.text.MaskFormatter("####-##-##");
+            loanMask.setPlaceholderCharacter('_');
+            LoanTimeFormattedTextField.setFormatterFactory(
+                new javax.swing.text.DefaultFormatterFactory(loanMask));
+        } catch (java.text.ParseException ex) {
+            // Nevar notikt ar fiksētu masku
+        }
+
+        // ============================================================
+        // Piesaista pogas, kurām NetBeans formā NAV actionPerformed.
+        // Pārējās pogas (LoginButton, AddButton, EditButton, SaveBookButton,
+        // CancelReservationButton, RunButton u.c.) jau ir piesaistītas NetBeans formā.
+        // ============================================================
+
+        // --- Galvenais JFrame ---
+        BookAddButton.addActionListener(e -> openNewBook());
+        BookLoanButton.addActionListener(e -> openLoan());
+        BookReturnButton.addActionListener(e -> openReturn());
+        UserListButton.addActionListener(e -> openUserList());
+        ReservationButton.addActionListener(e -> openReservations());
+        CloseButton1.addActionListener(e -> exitApplication());
+
+        // --- BookListDialog ---
+        DeleteButton.addActionListener(e -> deleteSelectedBook());
+
+        // --- LoanDialog ---
+        LoanButton.addActionListener(e -> issueBook());
+        ReturnButton4.addActionListener(e -> returnToMain(LoanDialog));
+
+        // --- ReturnDialog ---
+        jButton19.addActionListener(e -> returnToMain(ReturnDialog));
+
+        // --- ReservationDialog ---
+        CloseButton3.addActionListener(e -> returnToMain(ReservationDialog));
+        // CancelReservationButton un RunButton jau ir NetBeans formā — NEpiesaista atkārtoti!
+
+        // --- NotificationDialog ---
+        ReadButton.addActionListener(e -> markNotificationRead());
+        CloseButton4.addActionListener(e -> returnToMain(NotificationDialog));
+
+        // --- Rezervāciju tabulas izvēles izsekošana ---
+        ReservationTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) updateReservationActionButtons();
+        });
+        ReservationTable.setToolTipText("Lai atceltu vai izpildītu rezervāciju, vispirms atlasiet aktīvo ierakstu.");
+        CancelReservationButton.setToolTipText("Atcelt atlasīto aktīvo rezervāciju.");
+        RunButton.setToolTipText("Atzīmēt atlasīto aktīvo rezervāciju kā izpildītu.");
+
+    }
+
+    private List<JDialog> allDialogs() {
+        List<JDialog> result = new ArrayList<>();
+        result.add(LoginDialog); result.add(RegisterDialog);
+        result.add(BookListDialog); result.add(BookEditDialog); result.add(UserListFrameDialog);
+        result.add(UserEditDialog); result.add(LoanDialog); result.add(ReturnDialog);
+        result.add(ReservationDialog); result.add(NotificationDialog);
+        return result;
+    }
+
+    private void hideAllDialogs() {
+        for (JDialog d : allDialogs()) d.setVisible(false);
+    }
+
+    private void showDialog(JDialog dialog) {
+        setVisible(false);
+        hideAllDialogs();
+        dialog.setLocationRelativeTo(null);
+        dialog.setVisible(true);
+        dialog.toFront();
+    }
+
+    private void showLogin() {
+        clearRegisterFields();
+        UsernameTextField.setText("");
+        PasswordTextField.setText("");
+        showDialog(LoginDialog);
+        UsernameTextField.requestFocusInWindow();
+    }
+
+    private void showMain() {
+        updateMainRoleAccess();
+        hideAllDialogs();
+        pack();
+        setLocationRelativeTo(null);
+        setVisible(true);
+        toFront();
+    }
+
+    private void returnToMain(JDialog source) {
+        source.setVisible(false);
+        clearDialogFields(source);
+        showMain();
+    }
+
+    /** Izvēlas reāli redzamo logu ziņojuma vecākam; nekad nenodod JOptionPane null. */
+    private Component getMessageParent() {
+        for (JDialog dialog : allDialogs()) {
+            if (dialog.isVisible()) return dialog;
+        }
+        return this;
+    }
+
+    private void showInfo(String message) {
+        JOptionPane.showMessageDialog(getMessageParent(), message,
+                "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // Komponentes un izkārtojumu izveido NetBeans GUI Builder no .form faila.
+    private void configureMenus() {
+        menuExitItem.addActionListener(e -> exitApplication());
+        menuBooksItem.addActionListener(e -> openBookList());
+        menuAddBookItem.addActionListener(e -> openNewBook());
+        menuSearchBookItem.addActionListener(e -> openBookList());
+        menuUsersItem.addActionListener(e -> openUserList());
+        menuAddUserItem.addActionListener(e -> openNewUser());
+        menuIssueItem.addActionListener(e -> openLoan());
+        menuReturnItem.addActionListener(e -> openReturn());
+        menuOverdueItem.addActionListener(e -> openReturn(true));
+        menuReservationsItem.addActionListener(e -> openReservations());
+        menuNotificationsItem.addActionListener(e -> openNotifications());
+        menuAboutItem.addActionListener(e -> showInfo("LibInfo - bibliotēkas informācijas sistēma. Java Swing + Apache Derby."));
+    }
+
     private boolean isStaff() { return currentUser != null && (currentUser.getLoma() == Loma.ADMIN || currentUser.getLoma() == Loma.LIBRARIAN); }
     private boolean isAdmin() { return currentUser != null && currentUser.getLoma() == Loma.ADMIN; }
     private boolean isReader() { return currentUser != null && currentUser.getLoma() == Loma.READER; }
 
     private void updateMainRoleAccess() {
+        MainFrameStatusLabel.setText("Pieteicies: " + (currentUser == null ? "—" : currentUser.getLietotajvards()) + " | Loma: " + (currentUser == null ? "—" : currentUser.getLoma()));
         boolean staff = isStaff();
         boolean reader = isReader();
+
         BookAddButton.setEnabled(staff);
         BookListButton.setEnabled(true);
         BookReturnButton.setEnabled(staff);
@@ -76,18 +266,21 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         UserListButton.setEnabled(staff);
         ReservationButton.setEnabled(staff || reader);
         ReservationMenu.setEnabled(staff || reader);
+
         UserMenu.setEnabled(staff);
         LoanMenu.setEnabled(staff);
         NotificationMenu.setEnabled(staff || reader);
         NotificationsButton.setEnabled(staff || reader);
         if (menuAddBookItem != null) menuAddBookItem.setEnabled(staff);
         if (menuAddUserItem != null) menuAddUserItem.setEnabled(staff);
-        MainDialog.setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
+
+        setTitle("LibInfo - Galvenais logs" + (currentUser == null ? "" : " — " + currentUser.getLoma()));
     }
 
     private void showError(Throwable ex) {
         String message = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-        JOptionPane.showMessageDialog(getMessageParent(), message, "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(getMessageParent(), message,
+                "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
     }
 
     private void login() {
@@ -97,8 +290,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             currentUser = lietotajsDAO.authenticate(username, password);
             readNotificationKeys.clear();
             readNotificationKeys.addAll(lietotajsDAO.findReadNotificationKeys(currentUser));
+            UsernameTextField.setText("");
+            PasswordTextField.setText("");
             showMain();
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void openRegister() {
@@ -111,12 +308,16 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void registerUser() {
         String username = UsernameTextField1.getText().trim();
         try {
-            lietotajsDAO.registerUser(NameTextField.getText(), SurnameTextField.getText(), username,
+            lietotajsDAO.registerUser(
+                    NameTextField.getText(), SurnameTextField.getText(), username,
                     new String(PasswordTextField1.getPassword()), new String(PasswordProveTextField.getPassword()), EMailTextField.getText());
-            JOptionPane.showMessageDialog(RegisterDialog, "Reģistrācija veiksmīga. Tagad varat pieteikties.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(RegisterDialog,
+                    "Reģistrācija veiksmīga. Tagad varat pieteikties.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             showLogin();
             UsernameTextField.setText(username);
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void openBookList() {
@@ -129,24 +330,46 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         AddButton.setEnabled(staff);
         EditButton.setEnabled(staff);
         DeleteButton.setEnabled(staff);
-        loadBooksFromUi();
+        loadBooksFromUi(true);
     }
 
-    private void loadBooksFromUi() {
+    private void loadBooksFromUi() { loadBooksFromUi(false); }
+
+    private void loadBooksFromUi(boolean notifyResult) {
         try {
-            List<Gramata> books = gramataDAO.searchBooks(SearchTextField.getText().trim(), String.valueOf(FilterComboBox.getSelectedItem()), currentUser);
+            List<Gramata> books = gramataDAO.searchBooks(
+                    SearchTextField.getText().trim(), String.valueOf(FilterComboBox.getSelectedItem()), currentUser);
             DefaultTableModel model = (DefaultTableModel) BookTable.getModel();
             model.setRowCount(0);
             for (Gramata book : books) {
                 model.addRow(new Object[]{book.getGramatasId(), book.getNosaukums(), book.getAutors(),
                     book.getIsbn(), book.getKategorija(), book.getIzdosanasGads(), book.isPieejama() ? "Jā" : "Nē"});
             }
-        } catch (Exception ex) { showError(ex); }
+            if (notifyResult) showInfo("Grāmatu dati veiksmīgi nolasīti. Ierakstu skaits: " + books.size() + ".");
+        } catch (Exception ex) {
+            showError(ex);
+        }
+    }
+
+    private boolean loadBookChoices() {
+        try {
+            java.util.SortedSet<String> authors = new java.util.TreeSet<>();
+            java.util.SortedSet<String> categories = new java.util.TreeSet<>();
+            authors.add(""); categories.add("");
+            for (Gramata book : gramataDAO.searchBooks("", "Visas grāmatas", currentUser)) {
+                if (book.getAutors() != null) authors.add(book.getAutors());
+                if (book.getKategorija() != null) categories.add(book.getKategorija());
+            }
+            BookAuthorTextField.setModel(new DefaultComboBoxModel<>(authors.toArray(new String[0])));
+            BookCategoryTextField.setModel(new DefaultComboBoxModel<>(categories.toArray(new String[0])));
+            return true;
+        } catch (Exception ex) { showError(ex); return false; }
     }
 
     private void openNewBook() {
         if (!isStaff()) { showError(new SecurityException("Grāmatu pievienošana ir pieejama bibliotekāram vai administratoram.")); return; }
         editingBookId = -1;
+        if (!loadBookChoices()) return;
         clearBookFields();
         BookAvailabilityCheckBox.setEnabled(true);
         BookEditDialog.setTitle("LibInfo - Pievienot grāmatu");
@@ -162,29 +385,38 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         try {
             Gramata book = gramataDAO.findBookById(id, currentUser);
             if (book == null) throw new IllegalArgumentException("Grāmata nav atrasta.");
+            if (!loadBookChoices()) return;
             editingBookId = id;
             fillBookFields(book);
             BookAvailabilityCheckBox.setEnabled(false);
             BookEditDialog.setTitle("LibInfo - Rediģēt grāmatu");
             showDialog(BookEditDialog);
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void saveBook() {
         if (!isStaff()) return;
         try {
+            boolean yearWasEdited = bookYearEdited;
+            BookYearSpinner.commitEdit();
             Object yearValue = BookYearSpinner.getValue();
             Gramata book = new Gramata();
             book.setNosaukums(BookNameTextField.getText().trim());
-            book.setAutors(BookAuthorTextField.getText().trim());
+            book.setAutors(String.valueOf(BookAuthorTextField.getEditor().getItem()).trim());
             book.setIsbn(BookISBNTextField.getText().trim());
-            book.setKategorija(BookCategoryTextField.getText().trim());
+            book.setKategorija(String.valueOf(BookCategoryTextField.getEditor().getItem()).trim());
             book.setApraksts(BookDescriptionTextArea.getText().trim());
-            if (yearValue instanceof Number) book.setIzdosanasGads(((Number) yearValue).intValue());
+            if (yearValue instanceof Number && (editingBookId < 0 || originalBookYear != null || yearWasEdited)) {
+                book.setIzdosanasGads(((Number) yearValue).intValue());
+            }
             gramataDAO.saveBook(book, editingBookId, BookAvailabilityCheckBox.isSelected(), currentUser);
             JOptionPane.showMessageDialog(BookEditDialog, "Grāmatas dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             returnToBookList();
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void deleteSelectedBook() {
@@ -193,28 +425,33 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         if (row < 0) { showError(new IllegalArgumentException("Izvēlieties grāmatu tabulā.")); return; }
         int modelRow = BookTable.convertRowIndexToModel(row);
         int id = ((Number) BookTable.getModel().getValueAt(modelRow, 0)).intValue();
-        if (JOptionPane.showConfirmDialog(BookListDialog, "Dzēst izvēlēto grāmatu?", "Apstiprināt", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        if (JOptionPane.showConfirmDialog(BookListDialog, "Dzēst izvēlēto grāmatu?", "Apstiprināt",
+                JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
         try {
             if (!gramataDAO.deleteBook(id, currentUser)) throw new IllegalStateException("Grāmatu nevar dzēst, jo tai ir saistīti ieraksti.");
             showInfo("Grāmata veiksmīgi dzēsta.");
             loadBooksFromUi();
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void importBookByIsbn() {
         try {
             Gramata metadata = gramataDAO.fetchBookMetadataByIsbn(BookISBNTextField.getText().trim());
             BookNameTextField.setText(nvl(metadata.getNosaukums()));
-            BookAuthorTextField.setText(nvl(metadata.getAutors()));
+            BookAuthorTextField.setSelectedItem(nvl(metadata.getAutors()));
             BookDescriptionTextArea.setText(nvl(metadata.getApraksts()));
-            BookCategoryTextField.setText(nvl(metadata.getKategorija()));
+            BookCategoryTextField.setSelectedItem(nvl(metadata.getKategorija()));
             if (metadata.getIzdosanasGads() != null) {
                 int currentYear = java.time.LocalDate.now().getYear();
                 int year = metadata.getIzdosanasGads();
                 if (year >= 1800 && year <= currentYear + 1) BookYearSpinner.setValue(year);
             }
             showInfo("Dati aizpildīti no Google Books API.");
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void openUserList() {
@@ -225,7 +462,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         loadUsersFromUi();
     }
 
-    private void loadUsersFromUi() { loadUsersFromUi(true); }
+private void loadUsersFromUi(){
+        loadUsersFromUi(true);
+    }
 
     private void loadUsersFromUi(boolean showReadResult) {
         try {
@@ -237,7 +476,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                     user.getLietotajvards(), user.getEpasts(), user.getLoma()});
             }
             if (showReadResult) showInfo("Lietotāju dati veiksmīgi nolasīti. Ierakstu skaits: " + users.size() + ".");
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void openNewUser() {
@@ -279,7 +520,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             UserRoleComboBox.setEnabled(isAdmin() && id != currentUser.getLietotajaId());
             UserEditDialog.setTitle("LibInfo - Rediģēt lietotāju");
             showDialog(UserEditDialog);
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void saveUser() {
@@ -295,7 +538,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             lietotajsDAO.saveManagedUser(form, editingUserId, new String(UserPasswordTextField.getPassword()), currentUser);
             JOptionPane.showMessageDialog(UserEditDialog, "Lietotāja dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             returnToUserList();
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void deleteSelectedUser() {
@@ -304,86 +549,85 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         if (row < 0) { showError(new IllegalArgumentException("Izvēlieties lietotāju tabulā.")); return; }
         int modelRow = UserTable.convertRowIndexToModel(row);
         int id = ((Number) UserTable.getModel().getValueAt(modelRow, 0)).intValue();
-        if (JOptionPane.showConfirmDialog(UserListFrameDialog, "Dzēst izvēlēto lietotāju?", "Apstiprināt", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        if (JOptionPane.showConfirmDialog(UserListFrameDialog, "Dzēst izvēlēto lietotāju?", "Apstiprināt",
+                JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
         try {
             if (!lietotajsDAO.deleteUser(id, currentUser)) throw new IllegalStateException("Lietotāju nevar dzēst, jo tas ir piesaistīts izsniegumiem vai rezervācijām.");
             showInfo("Lietotājs veiksmīgi dzēsts.");
             loadUsersFromUi(false);
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
-    private void changeSelectedRole() {
-        if (!isAdmin()) { showError(new SecurityException("Lomas mainīt drīkst tikai administrators.")); return; }
-        int row = UserTable.getSelectedRow();
-        if (row < 0) { showError(new IllegalArgumentException("Izvēlieties lietotāju tabulā.")); return; }
-        int modelRow = UserTable.convertRowIndexToModel(row);
-        int id = ((Number) UserTable.getModel().getValueAt(modelRow, 0)).intValue();
-        List<Loma> roles = lietotajsDAO.getAvailableRoles(currentUser);
-        javax.swing.JComboBox<Loma> combo = new javax.swing.JComboBox<>(roles.toArray(new Loma[0]));
-        if (JOptionPane.showConfirmDialog(UserListFrameDialog, combo, "Izvēlieties jauno lomu", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
-        try {
-            lietotajsDAO.changeUserRole(id, (Loma) combo.getSelectedItem(), currentUser);
-            showInfo("Lietotāja loma veiksmīgi mainīta.");
-            loadUsersFromUi(false);
-        } catch (Exception ex) { showError(ex); }
-    }
+private void changeSelectedRole() {
+    if (!isAdmin()) { showError(new SecurityException("Lomas mainīt drīkst tikai administrators.")); return; }
+    editSelectedUser();
+    if (UserEditDialog.isVisible()) UserRoleComboBox.requestFocusInWindow();
+}
 
-    private void openLoan() {
-        if (!isStaff()) { showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators.")); return; }
-        showDialog(LoanDialog);
-        try {
-            loanReaders.clear();
-            loanReaders.addAll(lietotajsDAO.findReaderUsers(currentUser));
-            loanCopies.clear();
-            loanCopies.addAll(eksemplarsDAO.findAvailableCopies(currentUser));
+private void openLoan() {
+    if (!isStaff()) { showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators.")); return; }
+    showDialog(LoanDialog);
+    try {
+        loanReaders.clear();
+        loanReaders.addAll(lietotajsDAO.findReaderUsers(currentUser));
+        loanCopies.clear();
+        loanCopies.addAll(eksemplarsDAO.findAvailableCopies(currentUser));
 
-            if (loanReaders.isEmpty()) {
-                LoanButton.setEnabled(false);
-                ReaderComboBox.setModel(new DefaultComboBoxModel<>());
-                BookComboBox.setModel(new DefaultComboBoxModel<>());
-                showInfo("Nav reģistrētu lasītāju. Vispirms pievienojiet lasītāju.");
-                return;
-            }
-            if (loanCopies.isEmpty()) {
-                LoanButton.setEnabled(false);
-                String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
-                ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
-                BookComboBox.setModel(new DefaultComboBoxModel<>());
-                showInfo("Nav pieejamu eksemplāru.");
-                return;
-            }
-            LoanButton.setEnabled(true);
+        if (loanReaders.isEmpty()) {
+            LoanButton.setEnabled(false);
+            ReaderComboBox.setModel(new DefaultComboBoxModel<>());
+            BookComboBox.setModel(new DefaultComboBoxModel<>());
+            showInfo("Nav reģistrētu lasītāju. Vispirms pievienojiet lasītāju.");
+            return;
+        }
+        if (loanCopies.isEmpty()) {
+            LoanButton.setEnabled(false);
             String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
-            String[] copyNames = loanCopies.stream().map(copy -> copy.getGramata().getNosaukums()
-                    + " (eksemplārs ID " + copy.getEksemplaraId() + ")").toArray(String[]::new);
             ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
-            BookComboBox.setModel(new DefaultComboBoxModel<>(copyNames));
-            LoanDateTextField.setText(LocalDate.now().format(DATE_FORMAT));
-            LoanTimeFormattedTextField.setValue(LocalDate.now().plusDays(14).format(DATE_FORMAT));
-        } catch (Exception ex) { showError(ex); }
-    }
+            BookComboBox.setModel(new DefaultComboBoxModel<>());
+            showInfo("Nav pieejamu eksemplāru.");
+            return;
+        }
+        LoanButton.setEnabled(true);
 
-    private void issueBook() {
-        if (!isStaff()) return;
-        int readerIndex = ReaderComboBox.getSelectedIndex();
-        int copyIndex = BookComboBox.getSelectedIndex();
-        if (readerIndex < 0 || copyIndex < 0) {
-            showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));
-            return;
-        }
-        try { LoanTimeFormattedTextField.commitEdit(); }
-        catch (java.text.ParseException ex) {
-            showError(new IllegalArgumentException("Nederīgs termiņa formāts. Izmantojiet GGGG-MM-DD."));
-            return;
-        }
-        try {
-            izsniegumsDAO.issueBook(loanReaders.get(readerIndex).getLietotajaId(),
-                    loanCopies.get(copyIndex).getEksemplaraId(),
-                    String.valueOf(LoanTimeFormattedTextField.getValue()), currentUser);
-            JOptionPane.showMessageDialog(LoanDialog, "Grāmata izsniegta.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
-            returnToMain(LoanDialog);
-        } catch (Exception ex) { showError(ex); }
+        String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
+        String[] copyNames = loanCopies.stream().map(copy -> copy.getGramata().getNosaukums()
+                + " (eksemplārs ID " + copy.getEksemplaraId() + ")").toArray(String[]::new);
+        ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
+        BookComboBox.setModel(new DefaultComboBoxModel<>(copyNames));
+        LoanDateTextField.setText(LocalDate.now().format(DATE_FORMAT));
+        LoanTimeFormattedTextField.setValue(LocalDate.now().plusDays(14).format(DATE_FORMAT));
+    } catch (Exception ex) {
+        showError(ex);
     }
+}
+
+private void issueBook() {
+    if (!isStaff()) return;
+    int readerIndex = ReaderComboBox.getSelectedIndex();
+    int copyIndex = BookComboBox.getSelectedIndex();
+    if (readerIndex < 0 || copyIndex < 0) {
+        showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));
+        return;
+    }
+    try {
+        LoanTimeFormattedTextField.commitEdit(); // Validē maskētā termiņa lauka vērtību.
+    } catch (java.text.ParseException ex) {
+        showError(new IllegalArgumentException("Nederīgs termiņa formāts. Izmantojiet GGGG-MM-DD."));
+        return;
+    }
+    try {
+        izsniegumsDAO.issueBook(loanReaders.get(readerIndex).getLietotajaId(),
+                loanCopies.get(copyIndex).getEksemplaraId(),
+                String.valueOf(LoanTimeFormattedTextField.getValue()), currentUser);
+        JOptionPane.showMessageDialog(LoanDialog, "Grāmata izsniegta.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+        returnToMain(LoanDialog);
+    } catch (Exception ex) {
+        showError(ex);
+    }
+}
 
     private void openReturn() { openReturn(false); }
     private void openReturn(boolean overdueOnly) {
@@ -399,7 +643,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                         ? "" : loan.getEksemplars().getGramata().getNosaukums(), loan.getIzsniegts(), loan.getTermins()});
             }
             ReturnLabel.setText(overdueOnly ? "Kavētie izsniegumi" : "Aktīvie izsniegumi");
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void returnSelectedBook() {
@@ -412,7 +658,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             izsniegumsDAO.returnLoan(id, currentUser);
             showInfo("Grāmata veiksmīgi atgriezta.");
             openReturn(false);
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void openReservations() {
@@ -428,76 +676,79 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                     reservation.getDatums(), reservation.getStatuss()});
             }
             updateReservationActionButtons();
-        } catch (Exception ex) { showError(ex); }
-    }
-
-    private void updateReservationActionButtons() {
-        boolean activeSelection = false;
-        int selectedViewRow = ReservationTable.getSelectedRow();
-        if (selectedViewRow >= 0) {
-            int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
-            Object statusValue = ReservationTable.getModel().getValueAt(selectedModelRow, 4);
-            activeSelection = statusValue != null && RezervacijaDAO.isActiveStatus(statusValue.toString());
+        } catch (Exception ex) {
+            showError(ex);
         }
-        boolean staff = isStaff();
-        boolean reader = isReader();
-        boolean ownsSelection = false;
-        if (selectedViewRow >= 0) {
-            int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
-            Object readerValue = ReservationTable.getModel().getValueAt(selectedModelRow, 1);
-            ownsSelection = readerValue instanceof Lietotajs && currentUser != null
-                    && ((Lietotajs) readerValue).getLietotajaId() == currentUser.getLietotajaId();
+    }
+
+private void updateReservationActionButtons() {
+    boolean activeSelection = false;
+    int selectedViewRow = ReservationTable.getSelectedRow();
+    if (selectedViewRow >= 0) {
+        int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
+        Object statusValue = ReservationTable.getModel().getValueAt(selectedModelRow, 4);
+        activeSelection = statusValue != null && RezervacijaDAO.isActiveStatus(statusValue.toString());
+    }
+    boolean staff = isStaff();
+    boolean reader = isReader();
+    boolean ownsSelection = false;
+    if (selectedViewRow >= 0) {
+        int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
+        Object readerValue = ReservationTable.getModel().getValueAt(selectedModelRow, 1);
+        ownsSelection = readerValue instanceof Lietotajs
+                && currentUser != null
+                && ((Lietotajs) readerValue).getLietotajaId() == currentUser.getLietotajaId();
+    }
+    NewReservationButton.setEnabled(reader);
+    CancelReservationButton.setEnabled(reader && activeSelection && ownsSelection);
+    RunButton.setEnabled(staff && activeSelection);
+}
+
+private void createReservation() {
+    if (!isReader()) { showError(new SecurityException("Rezervāciju var izveidot tikai lasītājs.")); return; }
+    try {
+        reservationBooks.clear();
+        reservationBooks.addAll(rezervacijaDAO.findReservationBooks(currentUser));
+        if (reservationBooks.isEmpty()) {
+            showError(new IllegalStateException("Nav grāmatu rezervācijai."));
+            return;
         }
-        NewReservationButton.setEnabled(reader);
-        CancelReservationButton.setEnabled(reader && activeSelection && ownsSelection);
-        RunButton.setEnabled(staff && activeSelection);
-    }
+        String[] names = reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);
+        int selected = JOptionPane.showOptionDialog(ReservationDialog, "Izvēlieties grāmatu rezervācijai:",
+                "Jauna rezervācija", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, names, names[0]);
+        if (selected < 0) return;
+        rezervacijaDAO.createReservation(reservationBooks.get(selected).getGramatasId(), currentUser);
+        showInfo("Rezervācija izveidota.");
+        openReservations();
+    } catch (Exception ex) { showError(ex); }
+}
 
-    private void createReservation() {
-        if (!isReader()) { showError(new SecurityException("Rezervāciju var izveidot tikai lasītājs.")); return; }
-        try {
-            reservationBooks.clear();
-            reservationBooks.addAll(rezervacijaDAO.findReservationBooks(currentUser));
-            if (reservationBooks.isEmpty()) {
-                showError(new IllegalStateException("Nav grāmatu rezervācijai."));
-                return;
-            }
-            String[] names = reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);
-            int selected = JOptionPane.showOptionDialog(ReservationDialog, "Izvēlieties grāmatu rezervācijai:",
-                    "Jauna rezervācija", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                    null, names, names[0]);
-            if (selected < 0) return;
-            rezervacijaDAO.createReservation(reservationBooks.get(selected).getGramatasId(), currentUser);
-            showInfo("Rezervācija izveidota.");
-            openReservations();
-        } catch (Exception ex) { showError(ex); }
-    }
+private void cancelSelectedReservation() {
+    if (!isReader()) { showError(new SecurityException("Rezervāciju var atcelt tās īpašnieks — lasītājs.")); return; }
+    int row = ReservationTable.getSelectedRow();
+    if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
+    int modelRow = ReservationTable.convertRowIndexToModel(row);
+    int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
+    try {
+        rezervacijaDAO.cancelReservation(id, currentUser);
+        showInfo("Rezervācija veiksmīgi atcelta.");
+        openReservations();
+    } catch (Exception ex) { showError(ex); }
+}
 
-    private void cancelSelectedReservation() {
-        if (!isReader()) { showError(new SecurityException("Rezervāciju var atcelt tās īpašnieks — lasītājs.")); return; }
-        int row = ReservationTable.getSelectedRow();
-        if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
-        int modelRow = ReservationTable.convertRowIndexToModel(row);
-        int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
-        try {
-            rezervacijaDAO.cancelReservation(id, currentUser);
-            showInfo("Rezervācija veiksmīgi atcelta.");
-            openReservations();
-        } catch (Exception ex) { showError(ex); }
-    }
-
-    private void completeSelectedReservation() {
-        if (!isStaff()) { showError(new SecurityException("Rezervāciju var izpildīt bibliotekārs vai administrators.")); return; }
-        int row = ReservationTable.getSelectedRow();
-        if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
-        int modelRow = ReservationTable.convertRowIndexToModel(row);
-        int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
-        try {
-            rezervacijaDAO.completeReservation(id, currentUser);
-            showInfo("Rezervācija veiksmīgi izpildīta.");
-            openReservations();
-        } catch (Exception ex) { showError(ex); }
-    }
+private void completeSelectedReservation() {
+    if (!isStaff()) { showError(new SecurityException("Rezervāciju var izpildīt bibliotekārs vai administrators.")); return; }
+    int row = ReservationTable.getSelectedRow();
+    if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
+    int modelRow = ReservationTable.convertRowIndexToModel(row);
+    int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
+    try {
+        rezervacijaDAO.completeReservation(id, currentUser);
+        showInfo("Rezervācija veiksmīgi izpildīta.");
+        openReservations();
+    } catch (Exception ex) { showError(ex); }
+}
 
     private void openNotifications() {
         if (currentUser == null) return;
@@ -520,12 +771,17 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 model.addRow(new Object[]{100000 + reservation.getRezervacijasId(), "Rezervācija",
                     "Aktīva rezervācija: " + title, reservation.getDatums(), readNotificationKeys.contains(key) ? "Jā" : "Nē"});
             }
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void markNotificationRead() {
         int viewRow = NotificationTable.getSelectedRow();
-        if (viewRow < 0) { showError(new IllegalArgumentException("Izvēlieties paziņojumu.")); return; }
+        if (viewRow < 0) {
+            showError(new IllegalArgumentException("Izvēlieties paziņojumu."));
+            return;
+        }
         int row = NotificationTable.convertRowIndexToModel(viewRow);
         int displayedId = ((Number) NotificationTable.getModel().getValueAt(row, 0)).intValue();
         String label = String.valueOf(NotificationTable.getModel().getValueAt(row, 1));
@@ -537,39 +793,36 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             readNotificationKeys.add(key);
             showInfo("Paziņojums atzīmēts kā izlasīts un saglabāts datubāzē.");
             openNotifications();
-        } catch (Exception ex) { showError(ex); }
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
-    private void exitApplication() {
-        if (JOptionPane.showConfirmDialog(MainDialog, "Vai tiešām iziet no LibInfo?", "Iziet", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+    private void exitApplication(){
+        if(JOptionPane.showConfirmDialog(getMessageParent(),"Vai tiešām iziet no LibInfo?","Iziet",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;
         hideAllDialogs(); dispose(); System.exit(0);
     }
 
-    private void clearRegisterFields() { SurnameTextField.setText(""); NameTextField.setText(""); PasswordTextField1.setText(""); UsernameTextField1.setText(""); EMailTextField.setText(""); PasswordProveTextField.setText(""); }
+    private void clearRegisterFields(){SurnameTextField.setText("");NameTextField.setText("");PasswordTextField1.setText("");UsernameTextField1.setText("");EMailTextField.setText("");PasswordProveTextField.setText("");}
     private void clearBookFields() {
-        BookNameTextField.setText(""); BookAuthorTextField.setText(""); BookISBNTextField.setText("");
-        BookCategoryTextField.setText(""); BookYearSpinner.setValue(java.time.LocalDate.now().getYear());
+        BookNameTextField.setText(""); BookAuthorTextField.setSelectedItem(""); BookISBNTextField.setText("");
+        BookCategoryTextField.setSelectedItem(""); BookYearSpinner.setValue(java.time.LocalDate.now().getYear());
         BookDescriptionTextArea.setText(""); BookAvailabilityCheckBox.setSelected(true);
+        originalBookYear = null; bookYearEdited = false;
     }
     private void fillBookFields(Gramata book) {
-        BookNameTextField.setText(nvl(book.getNosaukums())); BookAuthorTextField.setText(nvl(book.getAutors()));
-        BookISBNTextField.setText(nvl(book.getIsbn())); BookCategoryTextField.setText(nvl(book.getKategorija()));
+        BookNameTextField.setText(nvl(book.getNosaukums())); BookAuthorTextField.setSelectedItem(nvl(book.getAutors()));
+        BookISBNTextField.setText(nvl(book.getIsbn())); BookCategoryTextField.setSelectedItem(nvl(book.getKategorija()));
         BookYearSpinner.setValue(book.getIzdosanasGads() == null ? java.time.LocalDate.now().getYear() : book.getIzdosanasGads());
         BookDescriptionTextArea.setText(nvl(book.getApraksts())); BookAvailabilityCheckBox.setSelected(book.isPieejama());
+        originalBookYear = book.getIzdosanasGads(); bookYearEdited = false;
     }
     private void clearUserFields() {
         UserNameTextField.setText(""); UserSurnameTextField.setText(""); UsernickTextField.setText("");
         UserPasswordTextField.setText(""); UserEMailTextField.setText(""); UserRoleComboBox.setSelectedItem("READER");
     }
-    private void fillUserFields(Lietotajs u) {
-        UserNameTextField.setText(nvl(u.getVards())); UserSurnameTextField.setText(nvl(u.getUzvards()));
-        UsernickTextField.setText(nvl(u.getLietotajvards())); UserPasswordTextField.setText("");
-        UserEMailTextField.setText(nvl(u.getEpasts()));
-        UserRoleComboBox.setSelectedItem(u.getLoma() == null ? "READER" : u.getLoma().name());
-    }
-    private void returnToBookList() { BookEditDialog.setVisible(false); clearDialogFields(BookEditDialog); showDialog(BookListDialog); loadBooksFromUi(); }
-    private void returnToUserList() { UserEditDialog.setVisible(false); clearDialogFields(UserEditDialog); showDialog(UserListFrameDialog); loadUsersFromUi(false); }
-
+    private void fillUserFields(Lietotajs u){UserNameTextField.setText(nvl(u.getVards()));UserSurnameTextField.setText(nvl(u.getUzvards()));UsernickTextField.setText(nvl(u.getLietotajvards()));UserPasswordTextField.setText("");UserEMailTextField.setText(nvl(u.getEpasts()));UserRoleComboBox.setSelectedItem(u.getLoma()==null?"READER":u.getLoma().name());}
+    private void returnToBookList(){BookEditDialog.setVisible(false);clearDialogFields(BookEditDialog);showDialog(BookListDialog);loadBooksFromUi();}    private void returnToUserList(){UserEditDialog.setVisible(false);clearDialogFields(UserEditDialog);showDialog(UserListFrameDialog);loadUsersFromUi(false);}
     private void clearDialogFields(JDialog dialog) {
         if (dialog == BookListDialog) {
             SearchTextField.setText("");
@@ -604,84 +857,45 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         ((DefaultTableModel) table.getModel()).setRowCount(0);
         table.clearSelection();
     }
-    private static String nvl(String value) { return value == null ? "" : value; }
+    private static String nvl(String value){return value==null?"":value;}
 
-    // ==================== UTILĪTAS (paliek kā metodes) ====================
-    private void setResponsiveTableContent(JDialog dialog, Component header, javax.swing.JScrollPane table, Component actions) {
-        Container content = dialog.getContentPane();
-        content.removeAll();
-        content.setLayout(new java.awt.BorderLayout(10, 10));
-        content.setBackground(new Color(246, 248, 251));
-        if (content instanceof javax.swing.JComponent) {
-            ((javax.swing.JComponent) content).setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        }
-        content.add(header, java.awt.BorderLayout.NORTH);
-        content.add(table, java.awt.BorderLayout.CENTER);
-        content.add(actions, java.awt.BorderLayout.SOUTH);
-    }
-
-    private List<JDialog> allDialogs() {
-        List<JDialog> result = new ArrayList<>();
-        result.add(LoginDialog); result.add(RegisterDialog); result.add(MainDialog);
-        result.add(BookListDialog); result.add(BookEditDialog); result.add(UserListFrameDialog);
-        result.add(UserEditDialog); result.add(LoanDialog); result.add(ReturnDialog);
-        result.add(ReservationDialog); result.add(NotificationDialog);
-        return result;
-    }
-
-    private void hideAllDialogs() { for (JDialog d : allDialogs()) d.setVisible(false); }
-
-    private void showDialog(JDialog dialog) {
-        hideAllDialogs();
-        dialog.setLocationRelativeTo(null);
-        dialog.setVisible(true);
-        dialog.toFront();
-    }
-
-    private void showLogin() {
-        clearRegisterFields();
-        UsernameTextField.setText("");
-        PasswordTextField.setText("");
-        showDialog(LoginDialog);
-        PasswordTextField.requestFocusInWindow();
-    }
-
-    private void showMain() { updateMainRoleAccess(); showDialog(MainDialog); }
-
-    private void returnToMain(JDialog source) {
-        source.setVisible(false);
-        clearDialogFields(source);
-        showMain();
-    }
-
-    private Component getMessageParent() {
-        for (JDialog dialog : allDialogs()) {
-            if (dialog.isVisible()) return dialog;
-        }
-        return MainDialog != null ? MainDialog : this;
-    }
-
-    private void showInfo(String message) {
-        JOptionPane.showMessageDialog(getMessageParent(), message, "LibInfo", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    // ==================== KONSTRUKTORS ====================
+    /**
+     * Creates new form LibInfoSaskarne
+     */
     public LibInfoSaskarne() {
         initComponents();
-        try {
-            lietotajsDAO.initializeDatabase();
-        } catch (Exception ex) {
-            showError(ex);
-        }
-        UsernameTextField.setText("");
-        PasswordTextField.setText("");
-        showLogin();
+        initializeApplication();
     }
 
-    // ==================== INIT COMPONENTS (ar AUTOGENERĒTU konfigurāciju) ====================
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+        MainFrameStatusLabel = new javax.swing.JLabel();
+        BookListDialogStatusLabel = new javax.swing.JLabel();
+        UserSearchLabel = new javax.swing.JLabel();
+        UserListFrameDialogStatusLabel = new javax.swing.JLabel();
+        UserEditDialogStatusLabel = new javax.swing.JLabel();
+        LoanDialogStatusLabel = new javax.swing.JLabel();
+        ReturnDialogStatusLabel = new javax.swing.JLabel();
+        ReservationDialogStatusLabel = new javax.swing.JLabel();
+        NotificationDialogStatusLabel = new javax.swing.JLabel();
+        LoginDialogSurface = new javax.swing.JPanel();
+        RegisterDialogSurface = new javax.swing.JPanel();
+        BookListDialogSurface = new javax.swing.JPanel();
+        BookEditDialogSurface = new javax.swing.JPanel();
+        UserListFrameDialogSurface = new javax.swing.JPanel();
+        UserEditDialogSurface = new javax.swing.JPanel();
+        LoanDialogSurface = new javax.swing.JPanel();
+        ReturnDialogSurface = new javax.swing.JPanel();
+        ReservationDialogSurface = new javax.swing.JPanel();
+        NotificationDialogSurface = new javax.swing.JPanel();
+        MainFrameSurface = new javax.swing.JPanel();
+
 
         LoginDialog = new javax.swing.JDialog();
         AppLabel = new javax.swing.JLabel();
@@ -708,23 +922,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         EMailTextField = new javax.swing.JTextField();
         RegisterButton1 = new javax.swing.JButton();
         CancelButton = new javax.swing.JButton();
-        MainDialog = new javax.swing.JDialog();
-        BookListButton = new javax.swing.JButton();
-        BookAddButton = new javax.swing.JButton();
-        UserListButton = new javax.swing.JButton();
-        BookLoanButton = new javax.swing.JButton();
-        ReservationButton = new javax.swing.JButton();
-        BookReturnButton = new javax.swing.JButton();
-        NotificationsButton = new javax.swing.JButton();
-        CloseButton1 = new javax.swing.JButton();
-        ActionsMenuBar = new javax.swing.JMenuBar();
-        FileMenu = new javax.swing.JMenu();
-        BookMenu = new javax.swing.JMenu();
-        UserMenu = new javax.swing.JMenu();
-        LoanMenu = new javax.swing.JMenu();
-        ReservationMenu = new javax.swing.JMenu();
-        NotificationMenu = new javax.swing.JMenu();
-        HelpMenu = new javax.swing.JMenu();
         BookListDialog = new javax.swing.JDialog();
         BookScrollPane = new javax.swing.JScrollPane();
         BookTable = new javax.swing.JTable();
@@ -740,10 +937,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         BookNameLabel = new javax.swing.JLabel();
         SaveBookButton = new javax.swing.JButton();
         BookAuthorLabel = new javax.swing.JLabel();
-        BookAuthorTextField = new javax.swing.JTextField();
+        BookAuthorTextField = new javax.swing.JComboBox();
         BookNameTextField = new javax.swing.JTextField();
         BookISBNLabel = new javax.swing.JLabel();
-        BookCategoryTextField = new javax.swing.JTextField();
+        BookCategoryTextField = new javax.swing.JComboBox();
         BookCategoryLabel = new javax.swing.JLabel();
         BookISBNTextField = new javax.swing.JTextField();
         BookYearLabel = new javax.swing.JLabel();
@@ -811,14 +1008,38 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         NotificationTable = new javax.swing.JTable();
         ReadButton = new javax.swing.JButton();
         CloseButton4 = new javax.swing.JButton();
+        BookListButton = new javax.swing.JButton();
+        BookAddButton = new javax.swing.JButton();
+        UserListButton = new javax.swing.JButton();
+        BookLoanButton = new javax.swing.JButton();
+        ReservationButton = new javax.swing.JButton();
+        BookReturnButton = new javax.swing.JButton();
+        NotificationsButton = new javax.swing.JButton();
+        CloseButton1 = new javax.swing.JButton();
+        ActionsMenuBar = new javax.swing.JMenuBar();
+        FileMenu = new javax.swing.JMenu();
+        menuExitItem = new javax.swing.JMenuItem();
+        BookMenu = new javax.swing.JMenu();
+        menuBooksItem = new javax.swing.JMenuItem();
+        menuAddBookItem = new javax.swing.JMenuItem();
+        menuSearchBookItem = new javax.swing.JMenuItem();
+        UserMenu = new javax.swing.JMenu();
+        menuUsersItem = new javax.swing.JMenuItem();
+        menuAddUserItem = new javax.swing.JMenuItem();
+        LoanMenu = new javax.swing.JMenu();
+        menuIssueItem = new javax.swing.JMenuItem();
+        menuReturnItem = new javax.swing.JMenuItem();
+        menuOverdueItem = new javax.swing.JMenuItem();
+        ReservationMenu = new javax.swing.JMenu();
+        menuReservationsItem = new javax.swing.JMenuItem();
+        NotificationMenu = new javax.swing.JMenu();
+        menuNotificationsItem = new javax.swing.JMenuItem();
+        HelpMenu = new javax.swing.JMenu();
+        menuAboutItem = new javax.swing.JMenuItem();
 
         LoginDialog.setResizable(false);
 
-        AppLabel.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
-        AppLabel.setText("LibInfo - Bibliotēkas sistēma");
 
-        UsernameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        UsernameLabel.setText("Lietotājvārds:");
 
         UsernameTextField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -826,109 +1047,50 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        PasswordLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        PasswordLabel.setText("Parole:");
 
-        LoginButton.setBackground(new java.awt.Color(204, 204, 204));
-        LoginButton.setText("Pieteikties");
         LoginButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 LoginButtonActionPerformed(evt);
             }
         });
 
-        RegisterButton.setBackground(new java.awt.Color(204, 204, 204));
-        RegisterButton.setText("Reģistrēties");
         RegisterButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 RegisterButtonActionPerformed(evt);
             }
         });
 
-        CloseButton.setBackground(new java.awt.Color(204, 204, 204));
-        CloseButton.setText("Aizvērt");
         CloseButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 CloseButtonActionPerformed(evt);
             }
         });
 
-        javax.swing.GroupLayout LoginDialogLayout = new javax.swing.GroupLayout(LoginDialog.getContentPane());
-        LoginDialog.getContentPane().setLayout(LoginDialogLayout);
-        LoginDialogLayout.setHorizontalGroup(
-            LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
-                .addContainerGap(49, Short.MAX_VALUE)
-                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(CloseButton)
-                        .addGap(73, 73, 73))
-                    .addGroup(LoginDialogLayout.createSequentialGroup()
-                        .addGap(8, 8, 8)
-                        .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(AppLabel)
-                            .addGroup(LoginDialogLayout.createSequentialGroup()
-                                .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(43, 43, 43))))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, LoginDialogLayout.createSequentialGroup()
-                .addGap(110, 110, 110)
-                .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 192, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-        LoginDialogLayout.setVerticalGroup(
-            LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoginDialogLayout.createSequentialGroup()
-                .addGap(56, 56, 56)
-                .addComponent(AppLabel)
-                .addGap(18, 18, 18)
-                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(58, 58, 58)
-                .addGroup(LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(CloseButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(52, Short.MAX_VALUE))
-        );
+
+        AppLabel.setText("LibInfo - Bibliotēkas sistēma");
+        UsernameLabel.setText("Lietotājvārds:");
+        PasswordLabel.setText("Parole:");
+        LoginButton.setText("Pieteikties");
+        RegisterButton.setText("Reģistrēties");
+        CloseButton.setText("Aizvērt");
+
 
         RegisterDialog.setResizable(false);
 
-        RegisterLabel.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
         RegisterLabel.setText("Jauna lietotāja reģistrācija");
 
-        NameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         NameLabel.setText("Vārds:");
 
-        SurnameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         SurnameLabel.setText("Uzvārds:");
 
-        UsernameLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UsernameLabel1.setText("Lietotājvārds:");
 
-        PasswordLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         PasswordLabel1.setText("Parole:");
 
-        PasswordProveLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         PasswordProveLabel.setText("Apstiprināt paroli:");
 
-        EMailLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         EMailLabel.setText("E-pasts:");
 
-        RegisterButton1.setBackground(new java.awt.Color(204, 204, 204));
         RegisterButton1.setText("Reģistrēties");
         RegisterButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -936,7 +1098,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        CancelButton.setBackground(new java.awt.Color(204, 204, 204));
         CancelButton.setText("Atcelt");
         CancelButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -944,223 +1105,34 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout RegisterDialogLayout = new javax.swing.GroupLayout(RegisterDialog.getContentPane());
-        RegisterDialog.getContentPane().setLayout(RegisterDialogLayout);
-        RegisterDialogLayout.setHorizontalGroup(
-            RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(RegisterDialogLayout.createSequentialGroup()
-                .addContainerGap(70, Short.MAX_VALUE)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
-                        .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(RegisterLabel, javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
-                                        .addComponent(SurnameLabel)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(SurnameTextField))
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, RegisterDialogLayout.createSequentialGroup()
-                                        .addComponent(NameLabel)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(UsernameLabel1)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(PasswordLabel1)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                    .addComponent(PasswordProveLabel)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(RegisterDialogLayout.createSequentialGroup()
-                                .addComponent(EMailLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(25, 25, 25)))
-                        .addGap(51, 51, 51))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, RegisterDialogLayout.createSequentialGroup()
-                        .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(117, 117, 117))))
-        );
-        RegisterDialogLayout.setVerticalGroup(
-            RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(RegisterDialogLayout.createSequentialGroup()
-                .addGap(41, 41, 41)
-                .addComponent(RegisterLabel)
-                .addGap(18, 18, 18)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(NameLabel)
-                    .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(SurnameLabel)
-                    .addComponent(SurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UsernameLabel1)
-                    .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PasswordLabel1)
-                    .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(PasswordProveLabel)
-                    .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(EMailLabel))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                .addGroup(RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
-        );
 
-        MainDialog.setResizable(false);
-        MainDialog.setSize(new java.awt.Dimension(470, 220));
-
-        BookListButton.setBackground(new java.awt.Color(204, 204, 204));
-        BookListButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookListButton.setText("Grāmatu saraksts");
-        BookListButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                BookListButtonActionPerformed(evt);
-            }
-        });
-
-        BookAddButton.setBackground(new java.awt.Color(204, 204, 204));
-        BookAddButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookAddButton.setText("Pievienot grāmatu");
-
-        UserListButton.setBackground(new java.awt.Color(204, 204, 204));
-        UserListButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        UserListButton.setText("Lietotāju saraksts");
-
-        BookLoanButton.setBackground(new java.awt.Color(204, 204, 204));
-        BookLoanButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookLoanButton.setText("Izsniegt grāmatu");
-
-        ReservationButton.setBackground(new java.awt.Color(204, 204, 204));
-        ReservationButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        ReservationButton.setText("Rezervācijas");
-
-        BookReturnButton.setBackground(new java.awt.Color(204, 204, 204));
-        BookReturnButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookReturnButton.setText("Atgriezt grāmatu");
-
-        NotificationsButton.setBackground(new java.awt.Color(204, 204, 204));
-        NotificationsButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        NotificationsButton.setText("Paziņojumi");
-        NotificationsButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                NotificationsButtonActionPerformed(evt);
-            }
-        });
-
-        CloseButton1.setBackground(new java.awt.Color(204, 204, 204));
-        CloseButton1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        CloseButton1.setText("Iziet");
-
-        FileMenu.setText("Fails");
-        ActionsMenuBar.add(FileMenu);
-
-        BookMenu.setText("Grāmatas");
-        ActionsMenuBar.add(BookMenu);
-
-        UserMenu.setText("Lietotāji");
-        ActionsMenuBar.add(UserMenu);
-
-        LoanMenu.setText("Izsniegums");
-        ActionsMenuBar.add(LoanMenu);
-
-        ReservationMenu.setText("Rezervācijas");
-        ActionsMenuBar.add(ReservationMenu);
-
-        NotificationMenu.setText("Paziņojumi");
-        ActionsMenuBar.add(NotificationMenu);
-
-        HelpMenu.setText("Palīdzība");
-        ActionsMenuBar.add(HelpMenu);
-
-        MainDialog.setJMenuBar(ActionsMenuBar);
-
-        javax.swing.GroupLayout MainDialogLayout = new javax.swing.GroupLayout(MainDialog.getContentPane());
-        MainDialog.getContentPane().setLayout(MainDialogLayout);
-        MainDialogLayout.setHorizontalGroup(
-            MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainDialogLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(MainDialogLayout.createSequentialGroup()
-                        .addComponent(BookListButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(BookAddButton))
-                    .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, MainDialogLayout.createSequentialGroup()
-                            .addComponent(UserListButton)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                            .addComponent(BookLoanButton))
-                        .addGroup(MainDialogLayout.createSequentialGroup()
-                            .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(ReservationButton)
-                                .addComponent(NotificationsButton))
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(CloseButton1)
-                                .addComponent(BookReturnButton)))))
-                .addContainerGap(179, Short.MAX_VALUE))
-        );
-        MainDialogLayout.setVerticalGroup(
-            MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(MainDialogLayout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookAddButton)
-                    .addComponent(BookListButton))
-                .addGap(18, 18, 18)
-                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookLoanButton)
-                    .addComponent(UserListButton))
-                .addGap(18, 18, 18)
-                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookReturnButton)
-                    .addComponent(ReservationButton))
-                .addGap(18, 18, 18)
-                .addGroup(MainDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(NotificationsButton)
-                    .addComponent(CloseButton1))
-                .addContainerGap(17, Short.MAX_VALUE))
-        );
-
-        BookListDialog.setResizable(true);
+        BookListDialog.setResizable(false);
         BookListDialog.setSize(new java.awt.Dimension(900, 600));
 
         BookTable.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null}
+
             },
             new String [] {
                 "ID", "Nosaukums", "Autors", "ISBN", "Kategorija", "Gads", "Pieejamība"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        BookTable.setAutoCreateRowSorter(true);
+        BookTable.setRowHeight(26);
         BookScrollPane.setViewportView(BookTable);
         if (BookTable.getColumnModel().getColumnCount() > 0) {
             BookTable.getColumnModel().getColumn(3).setResizable(false);
         }
 
-        AddButton.setBackground(new java.awt.Color(204, 204, 204));
         AddButton.setText("Pievienot");
         AddButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1168,7 +1140,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        EditButton.setBackground(new java.awt.Color(204, 204, 204));
         EditButton.setText("Rediģēt");
         EditButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1176,7 +1147,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        SearchButton.setBackground(new java.awt.Color(204, 204, 204));
         SearchButton.setText("Meklēt");
         SearchButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1184,21 +1154,17 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        DeleteButton.setBackground(new java.awt.Color(204, 204, 204));
         DeleteButton.setText("Dzēst");
 
-        FilterLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         FilterLabel.setText("Filtrs:");
 
-        FilterComboBox.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        FilterComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        FilterComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Visas", "Nosaukums", "Autors", "ISBN", "Kategorija" }));
         FilterComboBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 FilterComboBoxActionPerformed(evt);
             }
         });
 
-        CloseButton2.setBackground(new java.awt.Color(204, 204, 204));
         CloseButton2.setText("Aizvērt");
         CloseButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1206,56 +1172,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout BookListDialogLayout = new javax.swing.GroupLayout(BookListDialog.getContentPane());
-        BookListDialog.getContentPane().setLayout(BookListDialogLayout);
-        BookListDialogLayout.setHorizontalGroup(
-            BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookListDialogLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(BookScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 888, Short.MAX_VALUE)
-                .addContainerGap())
-            .addGroup(BookListDialogLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(SearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(SearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(FilterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 43, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(FilterComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(71, 71, 71))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookListDialogLayout.createSequentialGroup()
-                .addGap(9, 9, 9)
-                .addComponent(AddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(EditButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(DeleteButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(CloseButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(24, 24, 24))
-        );
-        BookListDialogLayout.setVerticalGroup(
-            BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookListDialogLayout.createSequentialGroup()
-                .addGap(14, 14, 14)
-                .addGroup(BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(SearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(SearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(FilterLabel)
-                    .addComponent(FilterComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(30, 30, 30)
-                .addComponent(BookScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 387, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 44, Short.MAX_VALUE)
-                .addGroup(BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(CloseButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(DeleteButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(EditButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(AddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(35, 35, 35))
-        );
 
-        BookNameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookNameLabel.setText("Vārds:");
 
         SaveBookButton.setText("Saglabāt");
@@ -1265,8 +1182,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        BookAuthorLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookAuthorLabel.setText("Autors:");
+
+        BookAuthorTextField.setEditable(true);
 
         BookNameTextField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1274,16 +1192,10 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        BookISBNLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookISBNLabel.setText("ISBN:");
 
-        BookCategoryTextField.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                BookCategoryTextFieldActionPerformed(evt);
-            }
-        });
+        BookCategoryTextField.setEditable(true);
 
-        BookCategoryLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookCategoryLabel.setText("Kategorija:");
 
         BookISBNTextField.addActionListener(new java.awt.event.ActionListener() {
@@ -1292,7 +1204,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        BookYearLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookYearLabel.setText("Izdošanas gads:");
 
         ReturnButton1.setText("Atcelt");
@@ -1302,7 +1213,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        ISBNSearchButton.setBackground(new java.awt.Color(204, 204, 204));
         ISBNSearchButton.setText("Meklēt pēc ISBN");
         ISBNSearchButton.setMaximumSize(new java.awt.Dimension(100, 45));
         ISBNSearchButton.setMinimumSize(new java.awt.Dimension(100, 45));
@@ -1313,140 +1223,46 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        BookDescriptionLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookDescriptionLabel.setText("Apraksts:");
 
         BookDescriptionTextArea.setColumns(20);
         BookDescriptionTextArea.setRows(5);
         jScrollPane3.setViewportView(BookDescriptionTextArea);
 
-        BookAvailabilityLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookAvailabilityLabel.setText("Pieejamība:");
+        BookAvailabilityLabel.setText("Sākotnējais eksemplārs:");
 
-        BookAvailabilityCheckBox.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        BookAvailabilityCheckBox.setText("jCheckBox1");
+        BookAvailabilityCheckBox.setText("Izveidot pieejamu eksemplāru");
         BookAvailabilityCheckBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 BookAvailabilityCheckBoxActionPerformed(evt);
             }
         });
 
-        javax.swing.GroupLayout BookEditDialogLayout = new javax.swing.GroupLayout(BookEditDialog.getContentPane());
-        BookEditDialog.getContentPane().setLayout(BookEditDialogLayout);
-        BookEditDialogLayout.setHorizontalGroup(
-            BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                .addGap(134, 134, 134)
-                .addComponent(SaveBookButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(ReturnButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addGap(102, 102, 102)
-                        .addComponent(BookNameLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(BookNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addContainerGap(96, Short.MAX_VALUE)
-                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                .addComponent(BookDescriptionLabel)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                                .addGap(49, 49, 49))
-                            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                        .addComponent(BookAvailabilityLabel)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(BookAvailabilityCheckBox))
-                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                        .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                                .addComponent(BookYearLabel)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(BookYearSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                            .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                                .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                                    .addComponent(BookCategoryLabel)
-                                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                    .addComponent(BookCategoryTextField))
-                                                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                                        .addComponent(BookAuthorLabel)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(BookAuthorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 210, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                                                        .addComponent(BookISBNLabel)
-                                                        .addGap(18, 18, 18)
-                                                        .addComponent(BookISBNTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                                        .addGap(12, 12, 12)
-                                        .addComponent(ISBNSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)))))
-                .addGap(20, 20, 20))
-        );
-        BookEditDialogLayout.setVerticalGroup(
-            BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(BookEditDialogLayout.createSequentialGroup()
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(BookEditDialogLayout.createSequentialGroup()
-                        .addGap(106, 106, 106)
-                        .addComponent(BookNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BookEditDialogLayout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(BookNameLabel)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookAuthorLabel)
-                    .addComponent(BookAuthorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookISBNLabel)
-                    .addComponent(BookISBNTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ISBNSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookCategoryLabel)
-                    .addComponent(BookCategoryTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(21, 21, 21)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookYearSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(BookYearLabel))
-                .addGap(18, 18, 18)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(BookDescriptionLabel))
-                .addGap(18, 18, 18)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookAvailabilityLabel)
-                    .addComponent(BookAvailabilityCheckBox))
-                .addGap(18, 18, 18)
-                .addGroup(BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(SaveBookButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ReturnButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(92, Short.MAX_VALUE))
-        );
 
         UserTable.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null}
+
             },
             new String [] {
                 "ID", "Vārds", "Uzvārds", "Lietotājvārds", "E-pasts", "Loma"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        UserTable.setAutoCreateRowSorter(true);
+        UserTable.setRowHeight(26);
         UserScrollPane.setViewportView(UserTable);
         if (UserTable.getColumnModel().getColumnCount() > 0) {
             UserTable.getColumnModel().getColumn(3).setResizable(false);
         }
 
-        AddUserButton.setBackground(new java.awt.Color(204, 204, 204));
         AddUserButton.setText("Pievienot");
         AddUserButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1454,7 +1270,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        ReturnButton2.setBackground(new java.awt.Color(204, 204, 204));
         ReturnButton2.setText("Atcelt");
         ReturnButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1462,7 +1277,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        EditUserButton.setBackground(new java.awt.Color(204, 204, 204));
         EditUserButton.setText("Rediģēt");
         EditUserButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1470,9 +1284,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        UserSearchTextField.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
 
-        UserSearchButton.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserSearchButton.setText("Meklēt:");
         UserSearchButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1480,7 +1292,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        DeleteUserButton.setBackground(new java.awt.Color(204, 204, 204));
         DeleteUserButton.setText("Dzēst");
         DeleteUserButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1488,7 +1299,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        EditUserRoleButton.setBackground(new java.awt.Color(204, 204, 204));
         EditUserRoleButton.setText("Mainīt lomu");
         EditUserRoleButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1496,58 +1306,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout UserListFrameDialogLayout = new javax.swing.GroupLayout(UserListFrameDialog.getContentPane());
-        UserListFrameDialog.getContentPane().setLayout(UserListFrameDialogLayout);
-        UserListFrameDialogLayout.setHorizontalGroup(
-            UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(UserScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 888, Short.MAX_VALUE)
-                    .addGroup(UserListFrameDialogLayout.createSequentialGroup()
-                        .addComponent(UserSearchButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(UserSearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 698, Short.MAX_VALUE)))
-                .addContainerGap())
-            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
-                .addGap(16, 16, 16)
-                .addComponent(AddUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(EditUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(12, 12, 12)
-                .addComponent(DeleteUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(EditUserRoleButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(ReturnButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(21, 21, 21))
-        );
-        UserListFrameDialogLayout.setVerticalGroup(
-            UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserListFrameDialogLayout.createSequentialGroup()
-                .addGap(14, 14, 14)
-                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UserSearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(UserSearchButton))
-                .addGap(30, 30, 30)
-                .addComponent(UserScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(31, 31, 31)
-                .addGroup(UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(DeleteUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(EditUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(AddUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(EditUserRoleButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ReturnButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(35, Short.MAX_VALUE))
-        );
 
         UserEditDialog.setSize(new java.awt.Dimension(450, 450));
 
-        UserNameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserNameLabel.setText("Vārds:");
 
-        ReturnButton3.setBackground(new java.awt.Color(204, 204, 204));
         ReturnButton3.setText("Atcelt");
         ReturnButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1555,10 +1318,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        UserSurnameLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserSurnameLabel.setText("Uzvārds:");
 
-        UsernickLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UsernickLabel.setText("Lietotājvārds:");
 
         UserPasswordTextField.addActionListener(new java.awt.event.ActionListener() {
@@ -1567,23 +1328,19 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        UserPasswordLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserPasswordLabel.setText("Parole:");
 
-        UserEMailLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserEMailLabel.setText("E-pasts:");
 
-        UserRoleLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserRoleLabel.setText("Loma:");
 
-        UserRoleComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        UserRoleComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "READER", "AUTHOR", "LIBRARIAN", "ADMIN" }));
         UserRoleComboBox.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 UserRoleComboBoxActionPerformed(evt);
             }
         });
 
-        SaveUserButton.setBackground(new java.awt.Color(204, 204, 204));
         SaveUserButton.setText("Saglabāt");
         SaveUserButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1591,185 +1348,46 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout UserEditDialogLayout = new javax.swing.GroupLayout(UserEditDialog.getContentPane());
-        UserEditDialog.getContentPane().setLayout(UserEditDialogLayout);
-        UserEditDialogLayout.setHorizontalGroup(
-            UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(UserEditDialogLayout.createSequentialGroup()
-                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(UserEditDialogLayout.createSequentialGroup()
-                                .addGap(121, 121, 121)
-                                .addComponent(UserPasswordLabel))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(UserRoleLabel)
-                                .addComponent(UserEMailLabel)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(UserPasswordTextField)
-                            .addComponent(UserEMailTextField)
-                            .addComponent(UserRoleComboBox, 0, 218, Short.MAX_VALUE)))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
-                                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(UserNameLabel)
-                                    .addComponent(UserSurnameLabel))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
-                            .addGroup(UserEditDialogLayout.createSequentialGroup()
-                                .addComponent(UsernickLabel)
-                                .addGap(13, 13, 13)))
-                        .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(UsernickTextField)
-                            .addComponent(UserSurnameTextField)
-                            .addComponent(UserNameTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 212, Short.MAX_VALUE))))
-                .addGap(63, 63, 63))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(ReturnButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(114, 114, 114))
-            .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(UserEditDialogLayout.createSequentialGroup()
-                    .addGap(123, 123, 123)
-                    .addComponent(SaveUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(227, Short.MAX_VALUE)))
-        );
-        UserEditDialogLayout.setVerticalGroup(
-            UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(UserEditDialogLayout.createSequentialGroup()
-                .addGap(106, 106, 106)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(UserNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(UserNameLabel, javax.swing.GroupLayout.Alignment.TRAILING))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(UserSurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(UserSurnameLabel))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UsernickLabel)
-                    .addComponent(UsernickTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UserPasswordLabel)
-                    .addComponent(UserPasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UserEMailLabel)
-                    .addComponent(UserEMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(UserRoleComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(UserRoleLabel))
-                .addGap(40, 40, 40)
-                .addComponent(ReturnButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(85, Short.MAX_VALUE))
-            .addGroup(UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, UserEditDialogLayout.createSequentialGroup()
-                    .addContainerGap(319, Short.MAX_VALUE)
-                    .addComponent(SaveUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(86, 86, 86)))
-        );
 
-        ReaderLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         ReaderLabel.setText("Lasītājs:");
 
         BookComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
-        BookLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         BookLabel.setText("Grāmata:");
 
         ReaderComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
-        LoanDateLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         LoanDateLabel.setText("Izsniegšanas datums:");
 
-        LoanTimeLabel.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         LoanTimeLabel.setText("Termiņš:");
 
-        LoanButton.setBackground(new java.awt.Color(204, 204, 204));
         LoanButton.setText("Izsniegt");
 
-        ReturnButton4.setBackground(new java.awt.Color(204, 204, 204));
         ReturnButton4.setText("Atcelt");
 
-        javax.swing.GroupLayout LoanDialogLayout = new javax.swing.GroupLayout(LoanDialog.getContentPane());
-        LoanDialog.getContentPane().setLayout(LoanDialogLayout);
-        LoanDialogLayout.setHorizontalGroup(
-            LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoanDialogLayout.createSequentialGroup()
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(LoanDialogLayout.createSequentialGroup()
-                        .addGap(203, 203, 203)
-                        .addComponent(LoanTimeLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(LoanTimeFormattedTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanDialogLayout.createSequentialGroup()
-                        .addGap(167, 167, 167)
-                        .addComponent(LoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(ReturnButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanDialogLayout.createSequentialGroup()
-                        .addGap(166, 166, 166)
-                        .addComponent(ReaderLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(ReaderComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(LoanDialogLayout.createSequentialGroup()
-                        .addGap(113, 113, 113)
-                        .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(BookLabel)
-                            .addComponent(LoanDateLabel))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(LoanDateTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(BookComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(149, Short.MAX_VALUE))
-        );
-        LoanDialogLayout.setVerticalGroup(
-            LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(LoanDialogLayout.createSequentialGroup()
-                .addGap(124, 124, 124)
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(ReaderLabel)
-                    .addComponent(ReaderComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BookLabel)
-                    .addComponent(BookComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(LoanDateLabel)
-                    .addComponent(LoanDateTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(LoanTimeLabel)
-                    .addComponent(LoanTimeFormattedTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(26, 26, 26)
-                .addGroup(LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(LoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ReturnButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(71, Short.MAX_VALUE))
-        );
 
-        ReturnLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         ReturnLabel.setText("Aktīvie izsniegumi");
 
         ReturnTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null}
+
             },
             new String [] {
                 "ID", "Lasītājs", "Grāmata", "Izsniegts", "Termiņš"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        ReturnTable.setAutoCreateRowSorter(true);
+        ReturnTable.setRowHeight(26);
         jScrollPane1.setViewportView(ReturnTable);
 
-        ReturnButton.setBackground(new java.awt.Color(204, 204, 204));
         ReturnButton.setText("Atgriezt");
         ReturnButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1777,55 +1395,29 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        jButton19.setBackground(new java.awt.Color(204, 204, 204));
         jButton19.setText("Atcelt");
 
-        javax.swing.GroupLayout ReturnDialogLayout = new javax.swing.GroupLayout(ReturnDialog.getContentPane());
-        ReturnDialog.getContentPane().setLayout(ReturnDialogLayout);
-        ReturnDialogLayout.setHorizontalGroup(
-            ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReturnDialogLayout.createSequentialGroup()
-                .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(ReturnDialogLayout.createSequentialGroup()
-                        .addGap(25, 25, 25)
-                        .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(ReturnLabel)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 555, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(ReturnDialogLayout.createSequentialGroup()
-                        .addGap(207, 207, 207)
-                        .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(20, Short.MAX_VALUE))
-        );
-        ReturnDialogLayout.setVerticalGroup(
-            ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReturnDialogLayout.createSequentialGroup()
-                .addGap(22, 22, 22)
-                .addComponent(ReturnLabel)
-                .addGap(27, 27, 27)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 223, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 32, Short.MAX_VALUE)
-                .addGroup(ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(31, 31, 31))
-        );
 
-        ReservationLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         ReservationLabel.setText("Rezervāciju saraksts");
 
         ReservationTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null}
+
             },
             new String [] {
                 "ID", "Lasītājs", "Grāmata", "Datums", "Statuss"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        ReservationTable.setAutoCreateRowSorter(true);
+        ReservationTable.setRowHeight(26);
         ReservationScrollPane.setViewportView(ReservationTable);
         if (ReservationTable.getColumnModel().getColumnCount() > 0) {
             ReservationTable.getColumnModel().getColumn(1).setResizable(false);
@@ -1833,7 +1425,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             ReservationTable.getColumnModel().getColumn(3).setResizable(false);
         }
 
-        NewReservationButton.setBackground(new java.awt.Color(204, 204, 204));
         NewReservationButton.setText("Jauna rezervācija");
         NewReservationButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1841,7 +1432,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        CancelReservationButton.setBackground(new java.awt.Color(204, 204, 204));
         CancelReservationButton.setText("Atcelt rezervāciju");
         CancelReservationButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1849,10 +1439,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        CloseButton3.setBackground(new java.awt.Color(204, 204, 204));
         CloseButton3.setText("Aizvērt");
 
-        RunButton.setBackground(new java.awt.Color(204, 204, 204));
         RunButton.setText("Izpildīt");
         RunButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1860,398 +1448,1605 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout ReservationDialogLayout = new javax.swing.GroupLayout(ReservationDialog.getContentPane());
-        ReservationDialog.getContentPane().setLayout(ReservationDialogLayout);
-        ReservationDialogLayout.setHorizontalGroup(
-            ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReservationDialogLayout.createSequentialGroup()
-                .addGap(25, 25, 25)
-                .addGroup(ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(ReservationDialogLayout.createSequentialGroup()
-                        .addComponent(NewReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(CancelReservationButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(RunButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(257, 257, 257)
-                        .addComponent(CloseButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(ReservationLabel)
-                        .addComponent(ReservationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 742, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(33, Short.MAX_VALUE))
-        );
-        ReservationDialogLayout.setVerticalGroup(
-            ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(ReservationDialogLayout.createSequentialGroup()
-                .addGap(22, 22, 22)
-                .addComponent(ReservationLabel)
-                .addGap(27, 27, 27)
-                .addComponent(ReservationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 365, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(NewReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(CancelReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(RunButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(CloseButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(15, Short.MAX_VALUE))
-        );
 
-        NotificationLabel.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         NotificationLabel.setText("Mani paziņojumi");
 
         NotificationTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null},
-                {null, null, null, null, null}
+
             },
             new String [] {
                 "ID", "Veids", "Teksts", "Datums", "Izlasīts"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        NotificationTable.setAutoCreateRowSorter(true);
+        NotificationTable.setRowHeight(26);
         NotificationScrollPane.setViewportView(NotificationTable);
         if (NotificationTable.getColumnModel().getColumnCount() > 0) {
             NotificationTable.getColumnModel().getColumn(3).setResizable(false);
         }
 
-        ReadButton.setBackground(new java.awt.Color(204, 204, 204));
         ReadButton.setText("Atzīmēt kā izlasītu");
 
-        CloseButton4.setBackground(new java.awt.Color(204, 204, 204));
         CloseButton4.setText("Aizvērt");
+
+
+        setTitle("LibInfo - Galvenais logs");
+
+        BookListButton.setText("Grāmatu saraksts");
+        BookListButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BookListButtonActionPerformed(evt);
+            }
+        });
+
+        BookAddButton.setText("Pievienot grāmatu");
+
+        UserListButton.setText("Lietotāju saraksts");
+
+        BookLoanButton.setText("Izsniegt grāmatu");
+
+        ReservationButton.setText("Rezervācijas");
+
+        BookReturnButton.setText("Atgriezt grāmatu");
+
+        NotificationsButton.setText("Paziņojumi");
+        NotificationsButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                NotificationsButtonActionPerformed(evt);
+            }
+        });
+
+        CloseButton1.setText("Iziet");
+
+        FileMenu.setText("Fails");
+
+        menuExitItem.setText("Iziet");
+        FileMenu.add(menuExitItem);
+
+        ActionsMenuBar.add(FileMenu);
+
+        BookMenu.setText("Grāmatas");
+
+        menuBooksItem.setText("Saraksts");
+        BookMenu.add(menuBooksItem);
+
+        menuAddBookItem.setText("Pievienot");
+        BookMenu.add(menuAddBookItem);
+
+        menuSearchBookItem.setText("Meklēt");
+        BookMenu.add(menuSearchBookItem);
+
+        ActionsMenuBar.add(BookMenu);
+
+        UserMenu.setText("Lietotāji");
+
+        menuUsersItem.setText("Saraksts");
+        UserMenu.add(menuUsersItem);
+
+        menuAddUserItem.setText("Pievienot");
+        UserMenu.add(menuAddUserItem);
+
+        ActionsMenuBar.add(UserMenu);
+
+        LoanMenu.setText("Izsniegums");
+
+        menuIssueItem.setText("Izsniegt");
+        LoanMenu.add(menuIssueItem);
+
+        menuReturnItem.setText("Atgriezt");
+        LoanMenu.add(menuReturnItem);
+
+        menuOverdueItem.setText("Kavētie");
+        LoanMenu.add(menuOverdueItem);
+
+        ActionsMenuBar.add(LoanMenu);
+
+        ReservationMenu.setText("Rezervācijas");
+
+        menuReservationsItem.setText("Saraksts");
+        ReservationMenu.add(menuReservationsItem);
+
+        ActionsMenuBar.add(ReservationMenu);
+
+        NotificationMenu.setText("Paziņojumi");
+
+        menuNotificationsItem.setText("Mani paziņojumi");
+        NotificationMenu.add(menuNotificationsItem);
+
+        ActionsMenuBar.add(NotificationMenu);
+
+        HelpMenu.setText("Palīdzība");
+
+        menuAboutItem.setText("Par programmu");
+        HelpMenu.add(menuAboutItem);
+
+        ActionsMenuBar.add(HelpMenu);
+
+        setJMenuBar(ActionsMenuBar);
+
+
+        LoginDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        AppLabel.setText("LibInfo - Bibliotēkas sistēma");
+        AppLabel.setFont(new java.awt.Font("Arial", 1, 16));
+        AppLabel.setHorizontalAlignment(0);
+        UsernameLabel.setText("Lietotājvārds:");
+        UsernameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernameLabel.setHorizontalAlignment(4);
+        UsernameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        PasswordLabel.setText("Parole:");
+        PasswordLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        PasswordLabel.setHorizontalAlignment(4);
+        PasswordTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        LoginButton.setText("Pieteikties");
+        LoginButton.setFont(new java.awt.Font("Arial", 0, 12));
+        LoginButton.setBackground(new java.awt.Color(225, 225, 225));
+        RegisterButton.setText("Reģistrēties");
+        RegisterButton.setFont(new java.awt.Font("Arial", 0, 12));
+        RegisterButton.setBackground(new java.awt.Color(225, 225, 225));
+        CloseButton.setText("Aizvērt");
+        CloseButton.setFont(new java.awt.Font("Arial", 0, 12));
+        CloseButton.setBackground(new java.awt.Color(225, 225, 225));
+        RegisterDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        RegisterLabel.setText("Jauna lietotāja reģistrācija");
+        RegisterLabel.setFont(new java.awt.Font("Arial", 1, 16));
+        RegisterLabel.setHorizontalAlignment(0);
+        NameLabel.setText("Vārds:");
+        NameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        NameLabel.setHorizontalAlignment(4);
+        NameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        SurnameLabel.setText("Uzvārds:");
+        SurnameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        SurnameLabel.setHorizontalAlignment(4);
+        SurnameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernameLabel1.setText("Lietotājvārds:");
+        UsernameLabel1.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernameLabel1.setHorizontalAlignment(4);
+        PasswordLabel1.setText("Parole:");
+        PasswordLabel1.setFont(new java.awt.Font("Arial", 0, 12));
+        PasswordLabel1.setHorizontalAlignment(4);
+        PasswordTextField1.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernameTextField1.setFont(new java.awt.Font("Arial", 0, 12));
+        PasswordProveLabel.setText("Apstiprināt paroli:");
+        PasswordProveLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        PasswordProveLabel.setHorizontalAlignment(4);
+        PasswordProveTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        EMailLabel.setText("E-pasts:");
+        EMailLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        EMailLabel.setHorizontalAlignment(4);
+        EMailTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        RegisterButton1.setText("Reģistrēties");
+        RegisterButton1.setFont(new java.awt.Font("Arial", 0, 12));
+        RegisterButton1.setBackground(new java.awt.Color(225, 225, 225));
+        CancelButton.setText("Atcelt");
+        CancelButton.setFont(new java.awt.Font("Arial", 0, 12));
+        CancelButton.setBackground(new java.awt.Color(225, 225, 225));
+        BookListDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        BookScrollPane.setFont(new java.awt.Font("Arial", 0, 12));
+        AddButton.setText("Pievienot");
+        AddButton.setFont(new java.awt.Font("Arial", 0, 12));
+        AddButton.setBackground(new java.awt.Color(225, 225, 225));
+        EditButton.setText("Rediģēt");
+        EditButton.setFont(new java.awt.Font("Arial", 0, 12));
+        EditButton.setBackground(new java.awt.Color(225, 225, 225));
+        SearchTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        SearchButton.setText("Meklēt");
+        SearchButton.setFont(new java.awt.Font("Arial", 0, 12));
+        SearchButton.setBackground(new java.awt.Color(225, 225, 225));
+        DeleteButton.setText("Dzēst");
+        DeleteButton.setFont(new java.awt.Font("Arial", 0, 12));
+        DeleteButton.setBackground(new java.awt.Color(225, 225, 225));
+        FilterLabel.setText("Filtrs:");
+        FilterLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        FilterLabel.setHorizontalAlignment(4);
+        FilterComboBox.setFont(new java.awt.Font("Arial", 0, 12));
+        CloseButton2.setText("Aizvērt");
+        CloseButton2.setFont(new java.awt.Font("Arial", 0, 12));
+        CloseButton2.setBackground(new java.awt.Color(225, 225, 225));
+        BookListDialogStatusLabel.setText("Kopā: 0 grāmatas");
+        BookListDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookListDialogStatusLabel.setHorizontalAlignment(2);
+        BookEditDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        BookNameLabel.setText("Nosaukums:");
+        BookNameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookNameLabel.setHorizontalAlignment(4);
+        SaveBookButton.setText("Saglabāt");
+        SaveBookButton.setFont(new java.awt.Font("Arial", 0, 12));
+        SaveBookButton.setBackground(new java.awt.Color(213, 229, 243));
+        BookAuthorLabel.setText("Autors:");
+        BookAuthorLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookAuthorLabel.setHorizontalAlignment(4);
+        BookAuthorTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        BookNameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        BookISBNLabel.setText("ISBN:");
+        BookISBNLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookISBNLabel.setHorizontalAlignment(4);
+        BookCategoryTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        BookCategoryLabel.setText("Kategorija:");
+        BookCategoryLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookCategoryLabel.setHorizontalAlignment(4);
+        BookISBNTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        BookYearLabel.setText("Izdošanas gads:");
+        BookYearLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookYearLabel.setHorizontalAlignment(4);
+        ReturnButton1.setText("Atcelt");
+        ReturnButton1.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton1.setBackground(new java.awt.Color(225, 225, 225));
+        ISBNSearchButton.setText("Meklēt pēc ISBN");
+        ISBNSearchButton.setFont(new java.awt.Font("Arial", 0, 12));
+        ISBNSearchButton.setBackground(new java.awt.Color(213, 229, 243));
+        BookYearSpinner.setFont(new java.awt.Font("Arial", 0, 12));
+        BookDescriptionLabel.setText("Apraksts:");
+        BookDescriptionLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookDescriptionLabel.setHorizontalAlignment(4);
+        jScrollPane3.setFont(new java.awt.Font("Arial", 0, 12));
+        BookAvailabilityLabel.setText("Pieejamība:");
+        BookAvailabilityLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookAvailabilityLabel.setHorizontalAlignment(4);
+        BookAvailabilityCheckBox.setText("Pieejama");
+        BookAvailabilityCheckBox.setFont(new java.awt.Font("Arial", 0, 12));
+        UserListFrameDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        UserScrollPane.setFont(new java.awt.Font("Arial", 0, 12));
+        AddUserButton.setText("Pievienot");
+        AddUserButton.setFont(new java.awt.Font("Arial", 0, 12));
+        AddUserButton.setBackground(new java.awt.Color(225, 225, 225));
+        ReturnButton2.setText("Atcelt");
+        ReturnButton2.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton2.setBackground(new java.awt.Color(225, 225, 225));
+        EditUserButton.setText("Rediģēt");
+        EditUserButton.setFont(new java.awt.Font("Arial", 0, 12));
+        EditUserButton.setBackground(new java.awt.Color(225, 225, 225));
+        UserSearchTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UserSearchButton.setText("Meklēt:");
+        UserSearchButton.setFont(new java.awt.Font("Arial", 0, 12));
+        UserSearchButton.setBackground(new java.awt.Color(225, 225, 225));
+        DeleteUserButton.setText("Dzēst");
+        DeleteUserButton.setFont(new java.awt.Font("Arial", 0, 12));
+        DeleteUserButton.setBackground(new java.awt.Color(225, 225, 225));
+        EditUserRoleButton.setText("Mainīt lomu");
+        EditUserRoleButton.setFont(new java.awt.Font("Arial", 0, 12));
+        EditUserRoleButton.setBackground(new java.awt.Color(213, 229, 243));
+        UserSearchLabel.setText("Meklēt:");
+        UserSearchLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserSearchLabel.setHorizontalAlignment(4);
+        UserListFrameDialogStatusLabel.setText("Kopā: 0 lietotāji");
+        UserListFrameDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserListFrameDialogStatusLabel.setHorizontalAlignment(2);
+        UserEditDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        UserNameLabel.setText("Vārds:");
+        UserNameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserNameLabel.setHorizontalAlignment(4);
+        ReturnButton3.setText("Atcelt");
+        ReturnButton3.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton3.setBackground(new java.awt.Color(225, 225, 225));
+        UserSurnameLabel.setText("Uzvārds:");
+        UserSurnameLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserSurnameLabel.setHorizontalAlignment(4);
+        UserSurnameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UserNameTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernickLabel.setText("Lietotājvārds:");
+        UsernickLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UsernickLabel.setHorizontalAlignment(4);
+        UserPasswordTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UserPasswordLabel.setText("Parole:");
+        UserPasswordLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserPasswordLabel.setHorizontalAlignment(4);
+        UsernickTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UserEMailTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        UserEMailLabel.setText("E-pasts:");
+        UserEMailLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserEMailLabel.setHorizontalAlignment(4);
+        UserRoleLabel.setText("Loma:");
+        UserRoleLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserRoleLabel.setHorizontalAlignment(4);
+        UserRoleComboBox.setFont(new java.awt.Font("Arial", 0, 12));
+        SaveUserButton.setText("Saglabāt");
+        SaveUserButton.setFont(new java.awt.Font("Arial", 0, 12));
+        SaveUserButton.setBackground(new java.awt.Color(213, 229, 243));
+        UserEditDialogStatusLabel.setText("Lomas: ADMIN / LIBRARIAN / READER / AUTHOR");
+        UserEditDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        UserEditDialogStatusLabel.setHorizontalAlignment(2);
+        LoanDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        ReaderLabel.setText("Lasītājs:");
+        ReaderLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        ReaderLabel.setHorizontalAlignment(4);
+        BookComboBox.setFont(new java.awt.Font("Arial", 0, 12));
+        BookLabel.setText("Grāmata:");
+        BookLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        BookLabel.setHorizontalAlignment(4);
+        ReaderComboBox.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanDateLabel.setText("Izsniegšanas datums:");
+        LoanDateLabel.setFont(new java.awt.Font("Arial", 0, 11));
+        LoanDateLabel.setHorizontalAlignment(4);
+        LoanDateTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanTimeLabel.setText("Termiņš:");
+        LoanTimeLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanTimeLabel.setHorizontalAlignment(4);
+        LoanTimeFormattedTextField.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanButton.setText("Izsniegt");
+        LoanButton.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanButton.setBackground(new java.awt.Color(213, 229, 243));
+        ReturnButton4.setText("Atcelt");
+        ReturnButton4.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton4.setBackground(new java.awt.Color(225, 225, 225));
+        LoanDialogStatusLabel.setText("Statuss: grāmata tiks atzīmēta kā izsniegta");
+        LoanDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        LoanDialogStatusLabel.setHorizontalAlignment(2);
+        ReturnDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        ReturnLabel.setText("Aktīvie izsniegumi");
+        ReturnLabel.setFont(new java.awt.Font("Arial", 1, 12));
+        ReturnLabel.setHorizontalAlignment(2);
+        jScrollPane1.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton.setText("Atgriezt");
+        ReturnButton.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnButton.setBackground(new java.awt.Color(213, 229, 243));
+        jButton19.setText("Atcelt");
+        jButton19.setFont(new java.awt.Font("Arial", 0, 12));
+        jButton19.setBackground(new java.awt.Color(225, 225, 225));
+        ReturnDialogStatusLabel.setText("Statuss: grāmata tiks atzīmēta kā pieejama");
+        ReturnDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        ReturnDialogStatusLabel.setHorizontalAlignment(2);
+        ReservationDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        ReservationLabel.setText("Rezervāciju saraksts");
+        ReservationLabel.setFont(new java.awt.Font("Arial", 1, 12));
+        ReservationLabel.setHorizontalAlignment(2);
+        ReservationScrollPane.setFont(new java.awt.Font("Arial", 0, 12));
+        NewReservationButton.setText("Jauna rezervācija");
+        NewReservationButton.setFont(new java.awt.Font("Arial", 0, 12));
+        NewReservationButton.setBackground(new java.awt.Color(213, 229, 243));
+        CancelReservationButton.setText("Atcelt rezervāciju");
+        CancelReservationButton.setFont(new java.awt.Font("Arial", 0, 12));
+        CancelReservationButton.setBackground(new java.awt.Color(225, 225, 225));
+        CloseButton3.setText("Aizvērt");
+        CloseButton3.setFont(new java.awt.Font("Arial", 0, 12));
+        CloseButton3.setBackground(new java.awt.Color(225, 225, 225));
+        RunButton.setText("Izpildīt");
+        RunButton.setFont(new java.awt.Font("Arial", 0, 12));
+        RunButton.setBackground(new java.awt.Color(225, 225, 225));
+        ReservationDialogStatusLabel.setText("Kopā: 0 rezervācijas");
+        ReservationDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        ReservationDialogStatusLabel.setHorizontalAlignment(2);
+        NotificationDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
+        NotificationLabel.setText("Mani paziņojumi");
+        NotificationLabel.setFont(new java.awt.Font("Arial", 1, 12));
+        NotificationLabel.setHorizontalAlignment(2);
+        NotificationScrollPane.setFont(new java.awt.Font("Arial", 0, 12));
+        ReadButton.setText("Atzīmēt kā izlasītu");
+        ReadButton.setFont(new java.awt.Font("Arial", 0, 12));
+        ReadButton.setBackground(new java.awt.Color(213, 229, 243));
+        CloseButton4.setText("Aizvērt");
+        CloseButton4.setFont(new java.awt.Font("Arial", 0, 12));
+        CloseButton4.setBackground(new java.awt.Color(225, 225, 225));
+        NotificationDialogStatusLabel.setText("Kopā: 0 paziņojumi");
+        NotificationDialogStatusLabel.setFont(new java.awt.Font("Arial", 0, 12));
+        NotificationDialogStatusLabel.setHorizontalAlignment(2);
+        MainFrameSurface.setBackground(new java.awt.Color(240, 240, 240));
+        BookListButton.setText("Grāmatu saraksts");
+        BookListButton.setFont(new java.awt.Font("Arial", 0, 10));
+        BookListButton.setBackground(new java.awt.Color(225, 225, 225));
+        BookAddButton.setText("Pievienot grāmatu");
+        BookAddButton.setFont(new java.awt.Font("Arial", 0, 10));
+        BookAddButton.setBackground(new java.awt.Color(225, 225, 225));
+        UserListButton.setText("Lietotāju saraksts");
+        UserListButton.setFont(new java.awt.Font("Arial", 0, 10));
+        UserListButton.setBackground(new java.awt.Color(225, 225, 225));
+        BookLoanButton.setText("Izsniegt grāmatu");
+        BookLoanButton.setFont(new java.awt.Font("Arial", 0, 10));
+        BookLoanButton.setBackground(new java.awt.Color(225, 225, 225));
+        ReservationButton.setText("Rezervācijas");
+        ReservationButton.setFont(new java.awt.Font("Arial", 0, 10));
+        ReservationButton.setBackground(new java.awt.Color(225, 225, 225));
+        BookReturnButton.setText("Atgriezt grāmatu");
+        BookReturnButton.setFont(new java.awt.Font("Arial", 0, 10));
+        BookReturnButton.setBackground(new java.awt.Color(225, 225, 225));
+        NotificationsButton.setText("Paziņojumi");
+        NotificationsButton.setFont(new java.awt.Font("Arial", 0, 10));
+        NotificationsButton.setBackground(new java.awt.Color(225, 225, 225));
+        CloseButton1.setText("Iziet");
+        CloseButton1.setFont(new java.awt.Font("Arial", 0, 10));
+        CloseButton1.setBackground(new java.awt.Color(225, 225, 225));
+        MainFrameStatusLabel.setText("Pieteicies: — | Loma: —");
+        MainFrameStatusLabel.setFont(new java.awt.Font("Arial", 0, 10));
+        MainFrameStatusLabel.setHorizontalAlignment(2);
+        BookTable.setFillsViewportHeight(true);
+        UserTable.setFillsViewportHeight(true);
+        ReturnTable.setFillsViewportHeight(true);
+        ReservationTable.setFillsViewportHeight(true);
+        NotificationTable.setFillsViewportHeight(true);
+        javax.swing.GroupLayout LoginDialogSurfaceLayout = new javax.swing.GroupLayout(LoginDialogSurface);
+        LoginDialogSurface.setLayout(LoginDialogSurfaceLayout);
+        LoginDialogSurfaceLayout.setHorizontalGroup(
+        LoginDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(AppLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 380, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 20, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 262, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(160, 160, 160)
+        .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 80, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 148, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 262, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(160, 160, 160)
+        .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 80, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(30, 30, 30)
+        .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 290, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(140, 140, 140)
+        .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 180, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(250, 250, 250)
+        .addComponent(CloseButton, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        );
+        LoginDialogSurfaceLayout.setVerticalGroup(
+        LoginDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(AppLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 244, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(74, 74, 74)
+        .addComponent(UsernameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 191, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(74, 74, 74)
+        .addComponent(UsernameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 191, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(114, 114, 114)
+        .addComponent(PasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 151, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(114, 114, 114)
+        .addComponent(PasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 151, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(194, 194, 194)
+        .addComponent(LoginButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 63, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(194, 194, 194)
+        .addComponent(RegisterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 63, Short.MAX_VALUE))
+        .addGroup(LoginDialogSurfaceLayout.createSequentialGroup()
+        .addGap(194, 194, 194)
+        .addComponent(CloseButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 63, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout RegisterDialogSurfaceLayout = new javax.swing.GroupLayout(RegisterDialogSurface);
+        RegisterDialogSurface.setLayout(RegisterDialogSurfaceLayout);
+        RegisterDialogSurfaceLayout.setHorizontalGroup(
+        RegisterDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(RegisterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 380, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 20, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(NameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(SurnameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(SurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UsernameLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(PasswordLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(PasswordProveLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(EMailLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 272, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(150, 150, 150)
+        .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(50, 50, 50)
+        .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 260, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(180, 180, 180)
+        .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 130, Short.MAX_VALUE))
+        );
+        RegisterDialogSurfaceLayout.setVerticalGroup(
+        RegisterDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(16, 16, 16)
+        .addComponent(RegisterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 348, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(62, 62, 62)
+        .addComponent(NameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 303, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(62, 62, 62)
+        .addComponent(NameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 303, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(97, 97, 97)
+        .addComponent(SurnameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 268, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(97, 97, 97)
+        .addComponent(SurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 268, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(132, 132, 132)
+        .addComponent(UsernameLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 233, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(132, 132, 132)
+        .addComponent(UsernameTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 233, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(167, 167, 167)
+        .addComponent(PasswordLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 198, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(167, 167, 167)
+        .addComponent(PasswordTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 198, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(202, 202, 202)
+        .addComponent(PasswordProveLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 163, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(202, 202, 202)
+        .addComponent(PasswordProveTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 163, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(237, 237, 237)
+        .addComponent(EMailLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 128, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(237, 237, 237)
+        .addComponent(EMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 128, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(307, 307, 307)
+        .addComponent(RegisterButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 50, Short.MAX_VALUE))
+        .addGroup(RegisterDialogSurfaceLayout.createSequentialGroup()
+        .addGap(307, 307, 307)
+        .addComponent(CancelButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 50, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout BookListDialogSurfaceLayout = new javax.swing.GroupLayout(BookListDialogSurface);
+        BookListDialogSurface.setLayout(BookListDialogSurfaceLayout);
+        BookListDialogSurfaceLayout.setHorizontalGroup(
+        BookListDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(SearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 580, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(330, 330, 330)
+        .addComponent(SearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 475, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(602, 602, 602)
+        .addComponent(FilterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 233, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(677, 677, 677)
+        .addComponent(FilterComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 23, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(BookScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 870, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(AddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 775, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(139, 139, 139)
+        .addComponent(EditButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 651, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(263, 263, 263)
+        .addComponent(DeleteButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 527, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(775, 775, 775)
+        .addComponent(CloseButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(BookListDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 876, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        BookListDialogSurfaceLayout.setVerticalGroup(
+        BookListDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(SearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 524, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(SearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 524, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(FilterLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 524, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(FilterComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 524, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(BookScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 380, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 127, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(467, 467, 467)
+        .addComponent(AddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(467, 467, 467)
+        .addComponent(EditButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(467, 467, 467)
+        .addComponent(DeleteButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(467, 467, 467)
+        .addComponent(CloseButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 70, Short.MAX_VALUE))
+        .addGroup(BookListDialogSurfaceLayout.createSequentialGroup()
+        .addGap(549, 549, 549)
+        .addComponent(BookListDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout BookEditDialogSurfaceLayout = new javax.swing.GroupLayout(BookEditDialogSurface);
+        BookEditDialogSurface.setLayout(BookEditDialogSurfaceLayout);
+        BookEditDialogSurfaceLayout.setHorizontalGroup(
+        BookEditDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookAuthorLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookAuthorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookISBNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookISBNTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 190, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookCategoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookCategoryTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookYearLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookYearSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 290, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(320, 320, 320)
+        .addComponent(ISBNSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookDescriptionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 360, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookAvailabilityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 392, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(BookAvailabilityCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, 220, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 170, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(110, 110, 110)
+        .addComponent(SaveBookButton, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 250, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(330, 330, 330)
+        .addComponent(ReturnButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 30, Short.MAX_VALUE))
+        );
+        BookEditDialogSurfaceLayout.setVerticalGroup(
+        BookEditDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(BookNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 525, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(20, 20, 20)
+        .addComponent(BookNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 525, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(60, 60, 60)
+        .addComponent(BookAuthorLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 485, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(60, 60, 60)
+        .addComponent(BookAuthorTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 485, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(100, 100, 100)
+        .addComponent(BookISBNLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 445, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(100, 100, 100)
+        .addComponent(BookISBNTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 444, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(140, 140, 140)
+        .addComponent(BookCategoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 405, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(140, 140, 140)
+        .addComponent(BookCategoryTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 405, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(180, 180, 180)
+        .addComponent(BookYearLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 365, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(180, 180, 180)
+        .addComponent(BookYearSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 364, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(100, 100, 100)
+        .addComponent(ISBNSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 444, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(225, 225, 225)
+        .addComponent(BookDescriptionLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 320, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(225, 225, 225)
+        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 187, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(405, 405, 405)
+        .addComponent(BookAvailabilityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 140, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(405, 405, 405)
+        .addComponent(BookAvailabilityCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 140, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(490, 490, 490)
+        .addComponent(SaveBookButton, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 46, Short.MAX_VALUE))
+        .addGroup(BookEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(490, 490, 490)
+        .addComponent(ReturnButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 46, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout UserListFrameDialogSurfaceLayout = new javax.swing.GroupLayout(UserListFrameDialogSurface);
+        UserListFrameDialogSurface.setLayout(UserListFrameDialogSurfaceLayout);
+        UserListFrameDialogSurfaceLayout.setHorizontalGroup(
+        UserListFrameDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(85, 85, 85)
+        .addComponent(UserSearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 305, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 510, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(405, 405, 405)
+        .addComponent(UserSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 400, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(UserSearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 825, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(UserScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 870, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(AddUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 775, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(139, 139, 139)
+        .addComponent(EditUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 651, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(263, 263, 263)
+        .addComponent(DeleteUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 527, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(387, 387, 387)
+        .addComponent(EditUserRoleButton, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 403, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(775, 775, 775)
+        .addComponent(ReturnButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(UserListFrameDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 876, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        UserListFrameDialogSurfaceLayout.setVerticalGroup(
+        UserListFrameDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(18, 18, 18)
+        .addComponent(UserSearchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 526, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(18, 18, 18)
+        .addComponent(UserSearchButton, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 526, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(18, 18, 18)
+        .addComponent(UserSearchLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 526, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(UserScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 380, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 127, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(464, 464, 464)
+        .addComponent(AddUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 73, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(464, 464, 464)
+        .addComponent(EditUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 73, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(464, 464, 464)
+        .addComponent(DeleteUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 73, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(464, 464, 464)
+        .addComponent(EditUserRoleButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 73, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(464, 464, 464)
+        .addComponent(ReturnButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 73, Short.MAX_VALUE))
+        .addGroup(UserListFrameDialogSurfaceLayout.createSequentialGroup()
+        .addGap(549, 549, 549)
+        .addComponent(UserListFrameDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout UserEditDialogSurfaceLayout = new javax.swing.GroupLayout(UserEditDialogSurface);
+        UserEditDialogSurface.setLayout(UserEditDialogSurfaceLayout);
+        UserEditDialogSurfaceLayout.setHorizontalGroup(
+        UserEditDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UserNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UserNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UserSurnameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UserSurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UsernickLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UsernickTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UserPasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UserPasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UserEMailLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UserEMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(UserRoleLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 103, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 337, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(125, 125, 125)
+        .addComponent(UserRoleComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(80, 80, 80)
+        .addComponent(SaveUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 240, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(240, 240, 240)
+        .addComponent(ReturnButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 80, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(UserEditDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 426, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        UserEditDialogSurfaceLayout.setVerticalGroup(
+        UserEditDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(25, 25, 25)
+        .addComponent(UserNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 370, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(25, 25, 25)
+        .addComponent(UserNameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 370, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(UserSurnameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 330, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(UserSurnameTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 330, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(105, 105, 105)
+        .addComponent(UsernickLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 290, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(105, 105, 105)
+        .addComponent(UsernickTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 290, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(145, 145, 145)
+        .addComponent(UserPasswordLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 250, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(145, 145, 145)
+        .addComponent(UserPasswordTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 250, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(185, 185, 185)
+        .addComponent(UserEMailLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 210, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(185, 185, 185)
+        .addComponent(UserEMailTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 210, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(225, 225, 225)
+        .addComponent(UserRoleLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 170, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(225, 225, 225)
+        .addComponent(UserRoleComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 170, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(335, 335, 335)
+        .addComponent(SaveUserButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 52, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(335, 335, 335)
+        .addComponent(ReturnButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 52, Short.MAX_VALUE))
+        .addGroup(UserEditDialogSurfaceLayout.createSequentialGroup()
+        .addGap(399, 399, 399)
+        .addComponent(UserEditDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout LoanDialogSurfaceLayout = new javax.swing.GroupLayout(LoanDialogSurface);
+        LoanDialogSurface.setLayout(LoanDialogSurfaceLayout);
+        LoanDialogSurfaceLayout.setHorizontalGroup(
+        LoanDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(ReaderLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 375, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(130, 130, 130)
+        .addComponent(ReaderComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 330, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 40, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 375, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(130, 130, 130)
+        .addComponent(BookComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 330, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 40, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(LoanDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 375, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(130, 130, 130)
+        .addComponent(LoanDateTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 205, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(LoanTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 375, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(130, 130, 130)
+        .addComponent(LoanTimeFormattedTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 205, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(80, 80, 80)
+        .addComponent(LoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 285, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(250, 250, 250)
+        .addComponent(ReturnButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 115, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(LoanDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 476, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        LoanDialogSurfaceLayout.setVerticalGroup(
+        LoanDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(25, 25, 25)
+        .addComponent(ReaderLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 270, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(25, 25, 25)
+        .addComponent(ReaderComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 270, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(BookLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 230, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(65, 65, 65)
+        .addComponent(BookComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 230, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(105, 105, 105)
+        .addComponent(LoanDateLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 190, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(105, 105, 105)
+        .addComponent(LoanDateTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 189, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(145, 145, 145)
+        .addComponent(LoanTimeLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 150, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(145, 145, 145)
+        .addComponent(LoanTimeFormattedTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 149, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(235, 235, 235)
+        .addComponent(LoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 52, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(235, 235, 235)
+        .addComponent(ReturnButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 52, Short.MAX_VALUE))
+        .addGroup(LoanDialogSurfaceLayout.createSequentialGroup()
+        .addGap(299, 299, 299)
+        .addComponent(LoanDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout ReturnDialogSurfaceLayout = new javax.swing.GroupLayout(ReturnDialogSurface);
+        ReturnDialogSurface.setLayout(ReturnDialogSurfaceLayout);
+        ReturnDialogSurfaceLayout.setHorizontalGroup(
+        ReturnDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(ReturnLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 570, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 570, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(140, 140, 140)
+        .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 320, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(315, 315, 315)
+        .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 145, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(ReturnDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 576, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        ReturnDialogSurfaceLayout.setVerticalGroup(
+        ReturnDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(ReturnLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 338, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(40, 40, 40)
+        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 232, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 100, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(292, 292, 292)
+        .addComponent(ReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(292, 292, 292)
+        .addComponent(jButton19, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReturnDialogSurfaceLayout.createSequentialGroup()
+        .addGap(349, 349, 349)
+        .addComponent(ReturnDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout ReservationDialogSurfaceLayout = new javax.swing.GroupLayout(ReservationDialogSurface);
+        ReservationDialogSurface.setLayout(ReservationDialogSurfaceLayout);
+        ReservationDialogSurfaceLayout.setHorizontalGroup(
+        ReservationDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(ReservationLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 770, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(ReservationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 770, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(NewReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 635, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(179, 179, 179)
+        .addComponent(CancelReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 471, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(343, 343, 343)
+        .addComponent(RunButton, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 307, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(660, 660, 660)
+        .addComponent(CloseButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(ReservationDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 776, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        ReservationDialogSurfaceLayout.setVerticalGroup(
+        ReservationDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(ReservationLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 438, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(40, 40, 40)
+        .addComponent(ReservationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 332, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 100, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(392, 392, 392)
+        .addComponent(NewReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(392, 392, 392)
+        .addComponent(CancelReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(392, 392, 392)
+        .addComponent(RunButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(392, 392, 392)
+        .addComponent(CloseButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(ReservationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(449, 449, 449)
+        .addComponent(ReservationDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout NotificationDialogSurfaceLayout = new javax.swing.GroupLayout(NotificationDialogSurface);
+        NotificationDialogSurface.setLayout(NotificationDialogSurfaceLayout);
+        NotificationDialogSurfaceLayout.setHorizontalGroup(
+        NotificationDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(NotificationLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 670, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(NotificationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 670, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(15, 15, 15)
+        .addComponent(ReadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 505, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(560, 560, 560)
+        .addComponent(CloseButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(NotificationDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 676, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        NotificationDialogSurfaceLayout.setVerticalGroup(
+        NotificationDialogSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(NotificationLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 388, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(40, 40, 40)
+        .addComponent(NotificationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 282, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 100, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(342, 342, 342)
+        .addComponent(ReadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(342, 342, 342)
+        .addComponent(CloseButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 45, Short.MAX_VALUE))
+        .addGroup(NotificationDialogSurfaceLayout.createSequentialGroup()
+        .addGap(399, 399, 399)
+        .addComponent(NotificationDialogStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout MainFrameSurfaceLayout = new javax.swing.GroupLayout(MainFrameSurface);
+        MainFrameSurface.setLayout(MainFrameSurfaceLayout);
+        MainFrameSurfaceLayout.setHorizontalGroup(
+        MainFrameSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(10, 10, 10)
+        .addComponent(BookListButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 785, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(120, 120, 120)
+        .addComponent(BookAddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 675, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(230, 230, 230)
+        .addComponent(UserListButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 565, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(340, 340, 340)
+        .addComponent(BookLoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 455, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(450, 450, 450)
+        .addComponent(BookReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 345, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(560, 560, 560)
+        .addComponent(ReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 235, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(670, 670, 670)
+        .addComponent(NotificationsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 125, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(780, 780, 780)
+        .addComponent(CloseButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 15, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(12, 12, 12)
+        .addComponent(MainFrameStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 876, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 12, Short.MAX_VALUE))
+        );
+        MainFrameSurfaceLayout.setVerticalGroup(
+        MainFrameSurfaceLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(BookListButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(BookAddButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(UserListButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(BookLoanButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(BookReturnButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(ReservationButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(NotificationsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(8, 8, 8)
+        .addComponent(CloseButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 497, Short.MAX_VALUE))
+        .addGroup(MainFrameSurfaceLayout.createSequentialGroup()
+        .addGap(517, 517, 517)
+        .addComponent(MainFrameStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 3, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout LoginDialogLayout = new javax.swing.GroupLayout(LoginDialog.getContentPane());
+        LoginDialog.getContentPane().setLayout(LoginDialogLayout);
+        LoginDialogLayout.setHorizontalGroup(
+        LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoginDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(LoginDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 420, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        LoginDialogLayout.setVerticalGroup(
+        LoginDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoginDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(LoginDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 292, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout RegisterDialogLayout = new javax.swing.GroupLayout(RegisterDialog.getContentPane());
+        RegisterDialog.getContentPane().setLayout(RegisterDialogLayout);
+        RegisterDialogLayout.setHorizontalGroup(
+        RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(RegisterDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(RegisterDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 420, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        RegisterDialogLayout.setVerticalGroup(
+        RegisterDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(RegisterDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(RegisterDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 392, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout BookListDialogLayout = new javax.swing.GroupLayout(BookListDialog.getContentPane());
+        BookListDialog.getContentPane().setLayout(BookListDialogLayout);
+        BookListDialogLayout.setHorizontalGroup(
+        BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookListDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(BookListDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 900, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        BookListDialogLayout.setVerticalGroup(
+        BookListDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookListDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(BookListDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 572, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout BookEditDialogLayout = new javax.swing.GroupLayout(BookEditDialog.getContentPane());
+        BookEditDialog.getContentPane().setLayout(BookEditDialogLayout);
+        BookEditDialogLayout.setHorizontalGroup(
+        BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookEditDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(BookEditDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        BookEditDialogLayout.setVerticalGroup(
+        BookEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(BookEditDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(BookEditDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 572, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout UserListFrameDialogLayout = new javax.swing.GroupLayout(UserListFrameDialog.getContentPane());
+        UserListFrameDialog.getContentPane().setLayout(UserListFrameDialogLayout);
+        UserListFrameDialogLayout.setHorizontalGroup(
+        UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserListFrameDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(UserListFrameDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 900, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        UserListFrameDialogLayout.setVerticalGroup(
+        UserListFrameDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserListFrameDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(UserListFrameDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 572, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout UserEditDialogLayout = new javax.swing.GroupLayout(UserEditDialog.getContentPane());
+        UserEditDialog.getContentPane().setLayout(UserEditDialogLayout);
+        UserEditDialogLayout.setHorizontalGroup(
+        UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserEditDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(UserEditDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 450, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        UserEditDialogLayout.setVerticalGroup(
+        UserEditDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(UserEditDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(UserEditDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 422, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout LoanDialogLayout = new javax.swing.GroupLayout(LoanDialog.getContentPane());
+        LoanDialog.getContentPane().setLayout(LoanDialogLayout);
+        LoanDialogLayout.setHorizontalGroup(
+        LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoanDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(LoanDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        LoanDialogLayout.setVerticalGroup(
+        LoanDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(LoanDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(LoanDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 322, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout ReturnDialogLayout = new javax.swing.GroupLayout(ReturnDialog.getContentPane());
+        ReturnDialog.getContentPane().setLayout(ReturnDialogLayout);
+        ReturnDialogLayout.setHorizontalGroup(
+        ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReturnDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(ReturnDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 600, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        ReturnDialogLayout.setVerticalGroup(
+        ReturnDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReturnDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(ReturnDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 372, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout ReservationDialogLayout = new javax.swing.GroupLayout(ReservationDialog.getContentPane());
+        ReservationDialog.getContentPane().setLayout(ReservationDialogLayout);
+        ReservationDialogLayout.setHorizontalGroup(
+        ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReservationDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(ReservationDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 800, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
+        ReservationDialogLayout.setVerticalGroup(
+        ReservationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(ReservationDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(ReservationDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 472, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
+        );
 
         javax.swing.GroupLayout NotificationDialogLayout = new javax.swing.GroupLayout(NotificationDialog.getContentPane());
         NotificationDialog.getContentPane().setLayout(NotificationDialogLayout);
         NotificationDialogLayout.setHorizontalGroup(
-            NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(NotificationDialogLayout.createSequentialGroup()
-                .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(NotificationDialogLayout.createSequentialGroup()
-                        .addGap(25, 25, 25)
-                        .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(NotificationLabel)
-                            .addComponent(NotificationScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 652, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(NotificationDialogLayout.createSequentialGroup()
-                        .addGap(26, 26, 26)
-                        .addComponent(ReadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 142, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(CloseButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(23, Short.MAX_VALUE))
+        NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(NotificationDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(NotificationDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 700, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
         );
         NotificationDialogLayout.setVerticalGroup(
-            NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(NotificationDialogLayout.createSequentialGroup()
-                .addGap(22, 22, 22)
-                .addComponent(NotificationLabel)
-                .addGap(27, 27, 27)
-                .addComponent(NotificationScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 287, Short.MAX_VALUE)
-                .addGap(18, 18, 18)
-                .addGroup(NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(CloseButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ReadButton, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(31, 31, 31))
+        NotificationDialogLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(NotificationDialogLayout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(NotificationDialogSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 422, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 429, Short.MAX_VALUE)
+        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(layout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(MainFrameSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 900, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 316, Short.MAX_VALUE)
+        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        .addGroup(layout.createSequentialGroup()
+        .addGap(0, 0, 0)
+        .addComponent(MainFrameSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 540, javax.swing.GroupLayout.PREFERRED_SIZE)
+        .addGap(0, 0, Short.MAX_VALUE))
         );
-
-        // ============================================================
-        // AUTOGENERĒTĀ KONFIGURĀCIJA (dialogs, listeners, layouts, polish)
-        // ============================================================
-        setVisible(false);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // --- Dialogu virsraksti un aizvēršanas uzvedība ---
-        LoginDialog.setTitle("LibInfo - Pieteikšanās");
-        LoginDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
-        RegisterDialog.setTitle("LibInfo - Reģistrācija");
-        RegisterDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); } });
-        MainDialog.setTitle("LibInfo - Galvenā izvēlne");
-        MainDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { dispose(); System.exit(0); } });
-        BookListDialog.setTitle("LibInfo - Grāmatu saraksts");
-        BookListDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListDialog); } });
-        BookEditDialog.setTitle("LibInfo - Grāmata");
-        BookEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToBookList(); } });
-        UserListFrameDialog.setTitle("LibInfo - Lietotāji");
-        UserListFrameDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameDialog); } });
-        UserEditDialog.setTitle("LibInfo - Lietotājs");
-        UserEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToUserList(); } });
-        LoanDialog.setTitle("LibInfo - Izsniegt grāmatu");
-        LoanDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanDialog); } });
-        ReturnDialog.setTitle("LibInfo - Atgriezt grāmatu");
-        ReturnDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnDialog); } });
-        ReservationDialog.setTitle("LibInfo - Rezervācijas");
-        ReservationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationDialog); } });
-        NotificationDialog.setTitle("LibInfo - Paziņojumi");
-        NotificationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); } });
-        for (JDialog d : allDialogs()) {
-            d.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
-            d.setModal(false);
-        }
-
-        // Sarakstu logi ir pārdimensionējami
-        BookListDialog.setResizable(true);
-        UserListFrameDialog.setResizable(true);
-        ReturnDialog.setResizable(true);
-        ReservationDialog.setResizable(true);
-        NotificationDialog.setResizable(true);
-
-        // --- Sākotnējie komponentu iestatījumi ---
-        int currentYear = java.time.LocalDate.now().getYear();
-        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, currentYear + 1, 1));
-        javax.swing.JSpinner.NumberEditor yearEditor = new javax.swing.JSpinner.NumberEditor(BookYearSpinner, "0");
-        yearEditor.getTextField().setHorizontalAlignment(javax.swing.JTextField.RIGHT);
-        BookYearSpinner.setEditor(yearEditor);
-        BookAvailabilityLabel.setText("Sākotnējais eksemplārs:");
-        BookAvailabilityCheckBox.setText("Izveidot pieejamu eksemplāru");
-        BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
-        LoanDateTextField.setEditable(false);
-        LoanDateTextField.setToolTipText("Sistēma automātiski reģistrē izsniegšanas datumu.");
-        try {
-            javax.swing.text.MaskFormatter loanMask = new javax.swing.text.MaskFormatter("####-##-##");
-            loanMask.setPlaceholderCharacter('_');
-            LoanTimeFormattedTextField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(loanMask));
-        } catch (java.text.ParseException ex) { /* nevar notikt ar fiksētu masku */ }
-
-        // --- Pogas, kurām nav NetBeans actionPerformed ---
-        BookAddButton.addActionListener(e -> openNewBook());
-        BookLoanButton.addActionListener(e -> openLoan());
-        BookReturnButton.addActionListener(e -> openReturn());
-        UserListButton.addActionListener(e -> openUserList());
-        ReservationButton.addActionListener(e -> openReservations());
-        CloseButton1.addActionListener(e -> exitApplication());
-        DeleteButton.addActionListener(e -> deleteSelectedBook());
-        LoanButton.addActionListener(e -> issueBook());
-        ReturnButton4.addActionListener(e -> returnToMain(LoanDialog));
-        jButton19.addActionListener(e -> returnToMain(ReturnDialog));
-        CloseButton3.addActionListener(e -> returnToMain(ReservationDialog));
-        ReadButton.addActionListener(e -> markNotificationRead());
-        CloseButton4.addActionListener(e -> returnToMain(NotificationDialog));
-
-        // --- Rezervāciju izvēles izsekošana ---
-        ReservationTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) updateReservationActionButtons();
-        });
-        ReservationTable.setToolTipText("Lai atceltu vai izpildītu rezervāciju, vispirms atlasiet aktīvo ierakstu.");
-        CancelReservationButton.setToolTipText("Atcelt atlasīto aktīvo rezervāciju.");
-        RunButton.setToolTipText("Atzīmēt atlasīto aktīvo rezervāciju kā izpildītu.");
-
-        // --- Izvēlnes ---
-        FileMenu.removeAll(); BookMenu.removeAll(); UserMenu.removeAll(); LoanMenu.removeAll();
-        ReservationMenu.removeAll(); NotificationMenu.removeAll(); HelpMenu.removeAll();
-        javax.swing.JMenuItem exit = new javax.swing.JMenuItem("Iziet");
-        exit.addActionListener(e -> exitApplication());
-        FileMenu.add(exit);
-        javax.swing.JMenuItem books = new javax.swing.JMenuItem("Saraksts");
-        books.addActionListener(e -> openBookList());
-        menuAddBookItem = new javax.swing.JMenuItem("Pievienot");
-        menuAddBookItem.addActionListener(e -> openNewBook());
-        javax.swing.JMenuItem searchBook = new javax.swing.JMenuItem("Meklēt");
-        searchBook.addActionListener(e -> openBookList());
-        BookMenu.add(books); BookMenu.add(menuAddBookItem); BookMenu.add(searchBook);
-        javax.swing.JMenuItem users = new javax.swing.JMenuItem("Saraksts");
-        users.addActionListener(e -> openUserList());
-        menuAddUserItem = new javax.swing.JMenuItem("Pievienot");
-        menuAddUserItem.addActionListener(e -> openNewUser());
-        UserMenu.add(users); UserMenu.add(menuAddUserItem);
-        javax.swing.JMenuItem issue = new javax.swing.JMenuItem("Izsniegt");
-        issue.addActionListener(e -> openLoan());
-        javax.swing.JMenuItem ret = new javax.swing.JMenuItem("Atgriezt");
-        ret.addActionListener(e -> openReturn());
-        javax.swing.JMenuItem overdue = new javax.swing.JMenuItem("Kavētie");
-        overdue.addActionListener(e -> openReturn(true));
-        LoanMenu.add(issue); LoanMenu.add(ret); LoanMenu.add(overdue);
-        javax.swing.JMenuItem reservations = new javax.swing.JMenuItem("Saraksts");
-        reservations.addActionListener(e -> openReservations());
-        ReservationMenu.add(reservations);
-        javax.swing.JMenuItem notifications = new javax.swing.JMenuItem("Mani paziņojumi");
-        notifications.addActionListener(e -> openNotifications());
-        NotificationMenu.add(notifications);
-        javax.swing.JMenuItem about = new javax.swing.JMenuItem("Par programmu");
-        about.addActionListener(e -> JOptionPane.showMessageDialog(MainDialog,
-                "LibInfo - bibliotēkas menedžmenta sistēma\nJava Swing + Apache Derby",
-                "Par programmu", JOptionPane.INFORMATION_MESSAGE));
-        HelpMenu.add(about);
-
-        // --- Responsīvais izkārtojums sarakstu logiem ---
-        {
-            java.awt.Rectangle screen = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-            int tableWidth = Math.max(360, Math.min(850, screen.width - 80));
-            int tableHeight = Math.max(160, Math.min(410, screen.height - 320));
-
-            javax.swing.JPanel bookToolbar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
-            bookToolbar.setOpaque(false);
-            SearchTextField.setPreferredSize(new Dimension(170, SearchTextField.getPreferredSize().height));
-            FilterComboBox.setPreferredSize(new Dimension(Math.min(210, tableWidth / 3), FilterComboBox.getPreferredSize().height));
-            bookToolbar.add(SearchTextField);
-            bookToolbar.add(SearchButton);
-            bookToolbar.add(FilterLabel);
-            bookToolbar.add(FilterComboBox);
-            BookScrollPane.setPreferredSize(new Dimension(tableWidth, tableHeight));
-            BookScrollPane.setMinimumSize(new Dimension(0, 120));
-            javax.swing.JPanel bookActions = new javax.swing.JPanel(new java.awt.BorderLayout(8, 0));
-            bookActions.setOpaque(false);
-            javax.swing.JPanel bookLeft = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
-            bookLeft.setOpaque(false);
-            bookLeft.add(AddButton); bookLeft.add(EditButton); bookLeft.add(DeleteButton);
-            javax.swing.JPanel bookClose = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
-            bookClose.setOpaque(false); bookClose.add(CloseButton2);
-            bookActions.add(bookLeft, java.awt.BorderLayout.CENTER);
-            bookActions.add(bookClose, java.awt.BorderLayout.EAST);
-            setResponsiveTableContent(BookListDialog, bookToolbar, BookScrollPane, bookActions);
-
-            javax.swing.JPanel userToolbar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
-            userToolbar.setOpaque(false);
-            UserSearchTextField.setPreferredSize(new Dimension(250, UserSearchTextField.getPreferredSize().height));
-            userToolbar.add(UserSearchTextField); userToolbar.add(UserSearchButton);
-            UserScrollPane.setPreferredSize(new Dimension(tableWidth, tableHeight));
-            UserScrollPane.setMinimumSize(new Dimension(0, 120));
-            javax.swing.JPanel userActions = new javax.swing.JPanel(new java.awt.BorderLayout(8, 0));
-            userActions.setOpaque(false);
-            javax.swing.JPanel userLeft = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
-            userLeft.setOpaque(false);
-            userLeft.add(AddUserButton); userLeft.add(EditUserButton); userLeft.add(DeleteUserButton); userLeft.add(EditUserRoleButton);
-            javax.swing.JPanel userClose = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
-            userClose.setOpaque(false); userClose.add(ReturnButton2);
-            userActions.add(userLeft, java.awt.BorderLayout.CENTER);
-            userActions.add(userClose, java.awt.BorderLayout.EAST);
-            setResponsiveTableContent(UserListFrameDialog, userToolbar, UserScrollPane, userActions);
-
-            int returnWidth = Math.max(360, Math.min(555, screen.width - 80));
-            jScrollPane1.setPreferredSize(new Dimension(returnWidth, Math.max(160, Math.min(260, screen.height - 320))));
-            jScrollPane1.setMinimumSize(new Dimension(0, 120));
-            javax.swing.JPanel returnActions = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 12, 0));
-            returnActions.setOpaque(false); returnActions.add(ReturnButton); returnActions.add(jButton19);
-            setResponsiveTableContent(ReturnDialog, ReturnLabel, jScrollPane1, returnActions);
-
-            NotificationScrollPane.setPreferredSize(new Dimension(Math.max(360, Math.min(660, screen.width - 80)),
-                    Math.max(160, Math.min(300, screen.height - 320))));
-            NotificationScrollPane.setMinimumSize(new Dimension(0, 120));
-            javax.swing.JPanel notificationActions = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 0));
-            notificationActions.setOpaque(false); notificationActions.add(ReadButton); notificationActions.add(CloseButton4);
-            setResponsiveTableContent(NotificationDialog, NotificationLabel, NotificationScrollPane, notificationActions);
-        }
-
-        // --- Rezervāciju dialoga elastīgais izkārtojums ---
-        {
-            Container content = ReservationDialog.getContentPane();
-            content.removeAll();
-            content.setLayout(new java.awt.BorderLayout(12, 12));
-            content.setBackground(new Color(246, 248, 251));
-            if (content instanceof javax.swing.JComponent) {
-                ((javax.swing.JComponent) content).setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 18, 16, 18));
-            }
-            javax.swing.JPanel heading = new javax.swing.JPanel(new java.awt.BorderLayout());
-            heading.setOpaque(false);
-            heading.add(ReservationLabel, java.awt.BorderLayout.CENTER);
-            content.add(heading, java.awt.BorderLayout.NORTH);
-            java.awt.Rectangle screen = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-            int tableWidth = Math.max(360, Math.min(742, screen.width - 80));
-            int tableHeight = Math.max(160, Math.min(365, screen.height - 285));
-            ReservationScrollPane.setPreferredSize(new java.awt.Dimension(tableWidth, tableHeight));
-            ReservationScrollPane.setMinimumSize(new java.awt.Dimension(0, 120));
-            content.add(ReservationScrollPane, java.awt.BorderLayout.CENTER);
-            javax.swing.JPanel leftActions = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0));
-            leftActions.setOpaque(false);
-            leftActions.add(NewReservationButton); leftActions.add(CancelReservationButton); leftActions.add(RunButton);
-            javax.swing.JPanel actions = new javax.swing.JPanel(new java.awt.BorderLayout(8, 0));
-            actions.setOpaque(false);
-            actions.add(leftActions, java.awt.BorderLayout.CENTER);
-            javax.swing.JPanel closePanel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
-            closePanel.setOpaque(false); closePanel.add(CloseButton3);
-            actions.add(closePanel, java.awt.BorderLayout.EAST);
-            content.add(actions, java.awt.BorderLayout.SOUTH);
-            content.revalidate();
-            content.repaint();
-        }
-
-        // --- Vizuālā sakārtošana (iteratīva, bez rekursijas) ---
-        {
-            Color background = new Color(246, 248, 251);
-            Font regular = new Font("SansSerif", Font.PLAIN, 13);
-            Font emphasis = new Font("SansSerif", Font.BOLD, 13);
-            JDialog[] styleDialogs = {LoginDialog, RegisterDialog, MainDialog, BookListDialog,
-                BookEditDialog, UserListFrameDialog, UserEditDialog, LoanDialog, ReturnDialog,
-                ReservationDialog, NotificationDialog};
-            java.util.Deque<Component> styleQueue = new java.util.ArrayDeque<>();
-            for (JDialog dialog : styleDialogs) {
-                dialog.getContentPane().setBackground(background);
-                styleQueue.add(dialog.getContentPane());
-            }
-            while (!styleQueue.isEmpty()) {
-                Component c = styleQueue.poll();
-                if (c instanceof javax.swing.JButton) {
-                    javax.swing.JButton button = (javax.swing.JButton) c;
-                    button.setFont(emphasis);
-                    button.setFocusPainted(false);
-                    button.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
-                    button.setMargin(new java.awt.Insets(6, 6, 6, 6));
-                } else if (c instanceof javax.swing.JTextField
-                        || c instanceof javax.swing.JTextArea
-                        || c instanceof javax.swing.JComboBox) {
-                    c.setFont(regular);
-                }
-                if (c instanceof Container) {
-                    for (Component child : ((Container) c).getComponents()) styleQueue.add(child);
-                }
-            }
-            JTable[] styleTables = {BookTable, UserTable, ReturnTable, ReservationTable, NotificationTable};
-            for (JTable table : styleTables) {
-                table.setFont(regular);
-                table.setRowHeight(26);
-                table.setFillsViewportHeight(true);
-                table.setShowVerticalLines(false);
-                table.setGridColor(new Color(226, 231, 238));
-                table.setSelectionBackground(new Color(218, 232, 249));
-                table.setSelectionForeground(Color.BLACK);
-                table.setAutoCreateRowSorter(true);
-                table.getTableHeader().setFont(emphasis);
-                table.getTableHeader().setBackground(new Color(232, 237, 244));
-                table.getTableHeader().setReorderingAllowed(false);
-            }
-        }
-
-        // --- Logu izmēru pielāgošana ekrānam ---
-        {
-            java.awt.Rectangle screen = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-            int maxWidth = Math.max(360, screen.width - 24);
-            int maxHeight = Math.max(280, screen.height - 48);
-            JDialog[] fitDialogs = {LoginDialog, RegisterDialog, MainDialog, BookListDialog,
-                BookEditDialog, UserListFrameDialog, UserEditDialog, LoanDialog, ReturnDialog,
-                ReservationDialog, NotificationDialog};
-            for (JDialog dialog : fitDialogs) {
-                dialog.pack();
-                Dimension packed = dialog.getSize();
-                if (packed.width > maxWidth || packed.height > maxHeight) {
-                    Container originalContent = dialog.getContentPane();
-                    javax.swing.JScrollPane outerScroll = new javax.swing.JScrollPane(originalContent);
-                    outerScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder());
-                    outerScroll.getVerticalScrollBar().setUnitIncrement(18);
-                    outerScroll.getHorizontalScrollBar().setUnitIncrement(18);
-                    outerScroll.setPreferredSize(new Dimension(Math.min(packed.width, maxWidth), Math.min(packed.height, maxHeight)));
-                    dialog.setContentPane(outerScroll);
-                    dialog.pack();
-                }
-                if (dialog.getWidth() > maxWidth || dialog.getHeight() > maxHeight) {
-                    dialog.setSize(Math.min(dialog.getWidth(), maxWidth), Math.min(dialog.getHeight(), maxHeight));
-                }
-            }
-        }
-
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void RegisterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterButtonActionPerformed
-        openRegister();
+    openRegister();
     }//GEN-LAST:event_RegisterButtonActionPerformed
 
     private void LoginButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoginButtonActionPerformed
@@ -2259,15 +3054,15 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }//GEN-LAST:event_LoginButtonActionPerformed
 
     private void CloseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CloseButtonActionPerformed
-        exitApplication();
+    exitApplication();
     }//GEN-LAST:event_CloseButtonActionPerformed
 
     private void CancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CancelButtonActionPerformed
-        showLogin();
+    showLogin();
     }//GEN-LAST:event_CancelButtonActionPerformed
 
     private void RegisterButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterButton1ActionPerformed
-        registerUser();
+    registerUser();
     }//GEN-LAST:event_RegisterButton1ActionPerformed
 
     private void ReturnButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ReturnButton3ActionPerformed
@@ -2299,7 +3094,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }//GEN-LAST:event_BookNameTextFieldActionPerformed
 
     private void NewReservationButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NewReservationButtonActionPerformed
-        createReservation();
+    createReservation();
     }//GEN-LAST:event_NewReservationButtonActionPerformed
 
     private void UserSearchButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UserSearchButtonActionPerformed
@@ -2311,11 +3106,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }//GEN-LAST:event_ISBNSearchButtonActionPerformed
 
     private void SearchButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SearchButtonActionPerformed
-        loadBooksFromUi();
+        loadBooksFromUi(true);
     }//GEN-LAST:event_SearchButtonActionPerformed
 
     private void EditUserButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditUserButtonActionPerformed
-        editSelectedUser();
+    editSelectedUser();
     }//GEN-LAST:event_EditUserButtonActionPerformed
 
     private void EditButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditButtonActionPerformed
@@ -2369,7 +3164,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             suppressFilterAction = false;
             return;
         }
-        if (BookListDialog.isVisible() && currentUser != null) loadBooksFromUi();
+        if (BookListDialog.isVisible() && currentUser != null) loadBooksFromUi(true);
     }//GEN-LAST:event_FilterComboBoxActionPerformed
 
     private void EditUserRoleButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditUserRoleButtonActionPerformed
@@ -2393,18 +3188,26 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }//GEN-LAST:event_UsernameTextFieldActionPerformed
 
     private void BookListButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BookListButtonActionPerformed
-        openBookList();
+    openBookList();
     }//GEN-LAST:event_BookListButtonActionPerformed
 
     private void CancelReservationButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CancelReservationButtonActionPerformed
-        cancelSelectedReservation();
+    cancelSelectedReservation();
     }//GEN-LAST:event_CancelReservationButtonActionPerformed
 
     private void RunButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RunButtonActionPerformed
-        completeSelectedReservation();
+    completeSelectedReservation();
     }//GEN-LAST:event_RunButtonActionPerformed
 
+    /**
+     * @param args the command line arguments
+     */
     public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
+         */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -2421,6 +3224,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(LibInfoSaskarne.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
+
+        /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new LibInfoSaskarne();
@@ -2429,17 +3235,38 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel MainFrameStatusLabel;
+    private javax.swing.JLabel BookListDialogStatusLabel;
+    private javax.swing.JLabel UserSearchLabel;
+    private javax.swing.JLabel UserListFrameDialogStatusLabel;
+    private javax.swing.JLabel UserEditDialogStatusLabel;
+    private javax.swing.JLabel LoanDialogStatusLabel;
+    private javax.swing.JLabel ReturnDialogStatusLabel;
+    private javax.swing.JLabel ReservationDialogStatusLabel;
+    private javax.swing.JLabel NotificationDialogStatusLabel;
+    private javax.swing.JPanel LoginDialogSurface;
+    private javax.swing.JPanel RegisterDialogSurface;
+    private javax.swing.JPanel BookListDialogSurface;
+    private javax.swing.JPanel BookEditDialogSurface;
+    private javax.swing.JPanel UserListFrameDialogSurface;
+    private javax.swing.JPanel UserEditDialogSurface;
+    private javax.swing.JPanel LoanDialogSurface;
+    private javax.swing.JPanel ReturnDialogSurface;
+    private javax.swing.JPanel ReservationDialogSurface;
+    private javax.swing.JPanel NotificationDialogSurface;
+    private javax.swing.JPanel MainFrameSurface;
+
     private javax.swing.JMenuBar ActionsMenuBar;
     private javax.swing.JButton AddButton;
     private javax.swing.JButton AddUserButton;
     private javax.swing.JLabel AppLabel;
     private javax.swing.JButton BookAddButton;
     private javax.swing.JLabel BookAuthorLabel;
-    private javax.swing.JTextField BookAuthorTextField;
+    private javax.swing.JComboBox BookAuthorTextField;
     private javax.swing.JCheckBox BookAvailabilityCheckBox;
     private javax.swing.JLabel BookAvailabilityLabel;
     private javax.swing.JLabel BookCategoryLabel;
-    private javax.swing.JTextField BookCategoryTextField;
+    private javax.swing.JComboBox BookCategoryTextField;
     private javax.swing.JComboBox<String> BookComboBox;
     private javax.swing.JLabel BookDescriptionLabel;
     private javax.swing.JTextArea BookDescriptionTextArea;
@@ -2486,7 +3313,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JLabel LoanTimeLabel;
     private javax.swing.JButton LoginButton;
     private javax.swing.JDialog LoginDialog;
-    private javax.swing.JDialog MainDialog;
     private javax.swing.JLabel NameLabel;
     private javax.swing.JTextField NameTextField;
     private javax.swing.JButton NewReservationButton;
@@ -2557,5 +3383,17 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JButton jButton19;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JMenuItem menuAboutItem;
+    private javax.swing.JMenuItem menuAddBookItem;
+    private javax.swing.JMenuItem menuAddUserItem;
+    private javax.swing.JMenuItem menuBooksItem;
+    private javax.swing.JMenuItem menuExitItem;
+    private javax.swing.JMenuItem menuIssueItem;
+    private javax.swing.JMenuItem menuNotificationsItem;
+    private javax.swing.JMenuItem menuOverdueItem;
+    private javax.swing.JMenuItem menuReservationsItem;
+    private javax.swing.JMenuItem menuReturnItem;
+    private javax.swing.JMenuItem menuSearchBookItem;
+    private javax.swing.JMenuItem menuUsersItem;
     // End of variables declaration//GEN-END:variables
 }

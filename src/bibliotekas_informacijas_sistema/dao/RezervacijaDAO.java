@@ -1,9 +1,5 @@
 package bibliotekas_informacijas_sistema.dao;
 
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Rezervacija;
-import bibliotekas_informacijas_sistema.model.Gramata;
 import java.sql.*;
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -12,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import bibliotekas_informacijas_sistema.db.DatabaseManager;
+import bibliotekas_informacijas_sistema.model.*;
 import static bibliotekas_informacijas_sistema.util.PasswordUtil.*;
 
 /** Rezervacija datu piekļuve ar parametrizētiem JDBC vaicājumiem */

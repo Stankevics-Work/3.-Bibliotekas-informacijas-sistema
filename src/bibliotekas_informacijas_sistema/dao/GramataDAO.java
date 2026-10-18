@@ -1,9 +1,5 @@
 package bibliotekas_informacijas_sistema.dao;
 
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Gramata;
-import bibliotekas_informacijas_sistema.model.Eksemplars;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -18,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import bibliotekas_informacijas_sistema.db.DatabaseManager;
+import bibliotekas_informacijas_sistema.model.*;
 import static bibliotekas_informacijas_sistema.util.PasswordUtil.*;
 
 /** Gramata datu piekļuve ar parametrizētiem JDBC vaicājumiem */
@@ -194,9 +191,15 @@ public class GramataDAO {
         if (form.getKategorija() != null && form.getKategorija().trim().length() > 50) throw new IllegalArgumentException("Kategorija nedrīkst pārsniegt 50 rakstzīmes.");
         if (form.getIsbn() != null && form.getIsbn().trim().length() > 20) throw new IllegalArgumentException("ISBN nedrīkst pārsniegt 20 rakstzīmes.");
         int currentYear = LocalDate.now().getYear();
-        if (form.getIzdosanasGads() != null && (form.getIzdosanasGads() < 1800 || form.getIzdosanasGads() > currentYear + 1)) {
-            throw new IllegalArgumentException("Izdošanas gadam jābūt starp 1800 un " + (currentYear + 1) + ".");
+        if (form.getIzdosanasGads() != null && (form.getIzdosanasGads() < 1800 || form.getIzdosanasGads() > 2100)) {
+            throw new IllegalArgumentException("Izdošanas gadam jābūt starp 1800 un 2100.");
         }
+        // Tukšs neobligāts ISBN jāglabā kā NULL, citādi UNIQUE liedz saglabāt otru grāmatu bez ISBN.
+        form.setNosaukums(form.getNosaukums().trim());
+        form.setAutors(clean(form.getAutors()));
+        form.setIsbn(clean(form.getIsbn()));
+        form.setKategorija(clean(form.getKategorija()));
+        form.setApraksts(clean(form.getApraksts()));
         return withConnection(connection -> {
             connection.setAutoCommit(false);
             try {

@@ -1,21 +1,12 @@
 package bibliotekas_informacijas_sistema;
 
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Gramata;
-import bibliotekas_informacijas_sistema.model.Eksemplars;
-import bibliotekas_informacijas_sistema.model.Izsniegums;
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Rezervacija;
-import bibliotekas_informacijas_sistema.dao.EksemplarsDAO;
-import bibliotekas_informacijas_sistema.dao.IzsniegumsDAO;
-import bibliotekas_informacijas_sistema.dao.GramataDAO;
-import bibliotekas_informacijas_sistema.dao.RezervacijaDAO;
-import bibliotekas_informacijas_sistema.dao.LietotajsDAO;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.Date;
+import bibliotekas_informacijas_sistema.dao.*;
 import bibliotekas_informacijas_sistema.db.DatabaseManager;
+import bibliotekas_informacijas_sistema.model.*;
 import bibliotekas_informacijas_sistema.util.PasswordUtil;
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -168,6 +159,44 @@ public class DatabaseIntegrationTest {
             PasswordUtil.hash("a".repeat(73));
             fail("BCrypt ievades garums nedrīkst pārsniegt 72 UTF-8 baitus");
         } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void librarianCannotOverwriteAdministratorThroughEditForm() throws Exception {
+        LietotajsDAO users = new LietotajsDAO();
+        users.initializeDatabase();
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        String originalHash = admin.getParole();
+        String originalName = admin.getVards();
+        admin.setVards("Changed");
+        try {
+            users.saveManagedUser(admin, admin.getLietotajaId(), "Replacement123!", actor());
+            fail("Bibliotekārs nedrīkst pārrakstīt administratora kontu");
+        } catch (SecurityException expected) { }
+        Lietotajs unchanged = new LietotajsDAO(connection).findById(admin.getLietotajaId());
+        assertEquals(originalHash, unchanged.getParole());
+        assertEquals(originalName, unchanged.getVards());
+        Lietotajs reader = reader("editable_reader");
+        reader.setVards("Updated");
+        users.saveManagedUser(reader, reader.getLietotajaId(), "", actor());
+        assertEquals("Updated", new LietotajsDAO(connection).findById(reader.getLietotajaId()).getVards());
+    }
+
+    @Test public void booksWithoutIsbnCanBeSavedAndUpdatedIndependently() throws Exception {
+        GramataDAO books = new GramataDAO();
+        Gramata first = new Gramata();
+        first.setNosaukums("  First  "); first.setIsbn("");
+        Gramata second = new Gramata();
+        second.setNosaukums("Second"); second.setIsbn("  ");
+        Gramata savedFirst = books.saveBook(first, -1, false, actor());
+        Gramata savedSecond = books.saveBook(second, -1, false, actor());
+        assertNull(savedFirst.getIsbn());
+        assertNull(savedSecond.getIsbn());
+        assertEquals("First", savedFirst.getNosaukums());
+        second.setNosaukums("Second updated");
+        books.saveBook(second, savedSecond.getGramatasId(), false, actor());
+        GramataDAO query = new GramataDAO(connection);
+        assertEquals("Second updated", query.findById(savedSecond.getGramatasId()).getNosaukums());
+        assertEquals("First", query.findById(savedFirst.getGramatasId()).getNosaukums());
     }
 
     @Test public void crudAndLoanLifecycle() throws Exception {
