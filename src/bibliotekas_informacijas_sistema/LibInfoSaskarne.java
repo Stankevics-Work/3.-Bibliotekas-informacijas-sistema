@@ -56,11 +56,8 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private boolean filterComboInitialized = false;
     private boolean suppressFilterAction = false;
 
-    /** Initializes application state after the NetBeans-generated components have been created. */
+    /** Paliek tikai DB inicializācija un ar datiem saistītie klausītāji. */
     private void initializeApplication() {
-        setVisible(false); // Vispirms tiek parādīts pieteikšanās dialogs.
-        configureDialogs();
-        configureMenus();
         BookTable.getModel().addTableModelListener(e -> BookListDialogStatusLabel.setText("Kopā: " + BookTable.getRowCount() + " grāmatas"));
         UserTable.getModel().addTableModelListener(e -> UserListFrameDialogStatusLabel.setText("Kopā: " + UserTable.getRowCount() + " lietotāji"));
         ReservationTable.getModel().addTableModelListener(e -> ReservationDialogStatusLabel.setText("Kopā: " + ReservationTable.getRowCount() + " rezervācijas"));
@@ -74,107 +71,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         UsernameTextField.setText("");
         PasswordTextField.setText("");
         showLogin();
-    }
-
-    private void configureDialogs() {
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); } });
-        LoginDialog.setTitle("LibInfo - Pieteikšanās");
-        RegisterDialog.setTitle("LibInfo - Reģistrācija");
-        setTitle("LibInfo - Galvenā izvēlne");
-        BookListDialog.setTitle("LibInfo - Grāmatu saraksts");
-        BookEditDialog.setTitle("LibInfo - Grāmata");
-        UserListFrameDialog.setTitle("LibInfo - Lietotāji");
-        UserEditDialog.setTitle("LibInfo - Lietotājs");
-        LoanDialog.setTitle("LibInfo - Izsniegt grāmatu");
-        ReturnDialog.setTitle("LibInfo - Atgriezt grāmatu");
-        ReservationDialog.setTitle("LibInfo - Rezervācijas");
-        NotificationDialog.setTitle("LibInfo - Paziņojumi");
-        LoginDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); } });
-        RegisterDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); } });
-        BookListDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListDialog); } });
-        BookEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookEditDialog); } });
-        UserListFrameDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameDialog); } });
-        UserEditDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserEditDialog); } });
-        LoanDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanDialog); } });
-        ReturnDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnDialog); } });
-        ReservationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationDialog); } });
-        NotificationDialog.addWindowListener(new java.awt.event.WindowAdapter() { @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); } });
-        for (JDialog d : allDialogs()) {
-            d.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-            d.setModal(false);
-        }
-        // Sarakstu logi ir pārdimensionējami; ievades logi izmanto visu komponentēm vajadzīgo izmēru.
-        BookListDialog.setResizable(true);
-        UserListFrameDialog.setResizable(true);
-        ReturnDialog.setResizable(true);
-        ReservationDialog.setResizable(true);
-        NotificationDialog.setResizable(true);
-
-        int currentYear = java.time.LocalDate.now().getYear();
-        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
-        BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
-        ((javax.swing.JSpinner.DefaultEditor) BookYearSpinner.getEditor()).getTextField()
-                .getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-        });
-        BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
-        LoanDateTextField.setEditable(false);
-        LoanDateTextField.setToolTipText("Sistēma automātiski reģistrē izsniegšanas datumu.");
-
-        // Termiņa lauka maska: GGGG-MM-DD formāts
-        try {
-            javax.swing.text.MaskFormatter loanMask =
-                new javax.swing.text.MaskFormatter("####-##-##");
-            loanMask.setPlaceholderCharacter('_');
-            LoanTimeFormattedTextField.setFormatterFactory(
-                new javax.swing.text.DefaultFormatterFactory(loanMask));
-        } catch (java.text.ParseException ex) {
-            // Nevar notikt ar fiksētu masku
-        }
-
-        // ============================================================
-        // Piesaista pogas, kurām NetBeans formā NAV actionPerformed.
-        // Pārējās pogas (LoginButton, AddButton, EditButton, SaveBookButton,
-        // CancelReservationButton, RunButton u.c.) jau ir piesaistītas NetBeans formā.
-        // ============================================================
-
-        // --- Galvenais JFrame ---
-        BookAddButton.addActionListener(e -> openNewBook());
-        BookLoanButton.addActionListener(e -> openLoan());
-        BookReturnButton.addActionListener(e -> openReturn());
-        UserListButton.addActionListener(e -> openUserList());
-        ReservationButton.addActionListener(e -> openReservations());
-        CloseButton1.addActionListener(e -> exitApplication());
-
-        // --- BookListDialog ---
-        DeleteButton.addActionListener(e -> deleteSelectedBook());
-
-        // --- LoanDialog ---
-        LoanButton.addActionListener(e -> issueBook());
-        ReturnButton4.addActionListener(e -> returnToMain(LoanDialog));
-
-        // --- ReturnDialog ---
-        jButton19.addActionListener(e -> returnToMain(ReturnDialog));
-
-        // --- ReservationDialog ---
-        CloseButton3.addActionListener(e -> returnToMain(ReservationDialog));
-        // CancelReservationButton un RunButton jau ir NetBeans formā — NEpiesaista atkārtoti!
-
-        // --- NotificationDialog ---
-        ReadButton.addActionListener(e -> markNotificationRead());
-        CloseButton4.addActionListener(e -> returnToMain(NotificationDialog));
-
-        // --- Rezervāciju tabulas izvēles izsekošana ---
-        ReservationTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) updateReservationActionButtons();
-        });
-        ReservationTable.setToolTipText("Lai atceltu vai izpildītu rezervāciju, vispirms atlasiet aktīvo ierakstu.");
-        CancelReservationButton.setToolTipText("Atcelt atlasīto aktīvo rezervāciju.");
-        RunButton.setToolTipText("Atzīmēt atlasīto aktīvo rezervāciju kā izpildītu.");
-
     }
 
     private List<JDialog> allDialogs() {
@@ -232,22 +128,6 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private void showInfo(String message) {
         JOptionPane.showMessageDialog(getMessageParent(), message,
                 "LibInfo", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    // Komponentes un izkārtojumu izveido NetBeans GUI Builder no .form faila.
-    private void configureMenus() {
-        menuExitItem.addActionListener(e -> exitApplication());
-        menuBooksItem.addActionListener(e -> openBookList());
-        menuAddBookItem.addActionListener(e -> openNewBook());
-        menuSearchBookItem.addActionListener(e -> openBookList());
-        menuUsersItem.addActionListener(e -> openUserList());
-        menuAddUserItem.addActionListener(e -> openNewUser());
-        menuIssueItem.addActionListener(e -> openLoan());
-        menuReturnItem.addActionListener(e -> openReturn());
-        menuOverdueItem.addActionListener(e -> openReturn(true));
-        menuReservationsItem.addActionListener(e -> openReservations());
-        menuNotificationsItem.addActionListener(e -> openNotifications());
-        menuAboutItem.addActionListener(e -> showInfo("LibInfo - bibliotēkas informācijas sistēma. Java Swing + Apache Derby."));
     }
 
     private boolean isStaff() { return currentUser != null && (currentUser.getLoma() == Loma.ADMIN || currentUser.getLoma() == Loma.LIBRARIAN); }
@@ -462,9 +342,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         loadUsersFromUi();
     }
 
-private void loadUsersFromUi(){
-        loadUsersFromUi(true);
-    }
+    private void loadUsersFromUi(){ loadUsersFromUi(true); }
 
     private void loadUsersFromUi(boolean showReadResult) {
         try {
@@ -560,74 +438,74 @@ private void loadUsersFromUi(){
         }
     }
 
-private void changeSelectedRole() {
-    if (!isAdmin()) { showError(new SecurityException("Lomas mainīt drīkst tikai administrators.")); return; }
-    editSelectedUser();
-    if (UserEditDialog.isVisible()) UserRoleComboBox.requestFocusInWindow();
-}
+    private void changeSelectedRole() {
+        if (!isAdmin()) { showError(new SecurityException("Lomas mainīt drīkst tikai administrators.")); return; }
+        editSelectedUser();
+        if (UserEditDialog.isVisible()) UserRoleComboBox.requestFocusInWindow();
+    }
 
-private void openLoan() {
-    if (!isStaff()) { showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators.")); return; }
-    showDialog(LoanDialog);
-    try {
-        loanReaders.clear();
-        loanReaders.addAll(lietotajsDAO.findReaderUsers(currentUser));
-        loanCopies.clear();
-        loanCopies.addAll(eksemplarsDAO.findAvailableCopies(currentUser));
+    private void openLoan() {
+        if (!isStaff()) { showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators.")); return; }
+        showDialog(LoanDialog);
+        try {
+            loanReaders.clear();
+            loanReaders.addAll(lietotajsDAO.findReaderUsers(currentUser));
+            loanCopies.clear();
+            loanCopies.addAll(eksemplarsDAO.findAvailableCopies(currentUser));
 
-        if (loanReaders.isEmpty()) {
-            LoanButton.setEnabled(false);
-            ReaderComboBox.setModel(new DefaultComboBoxModel<>());
-            BookComboBox.setModel(new DefaultComboBoxModel<>());
-            showInfo("Nav reģistrētu lasītāju. Vispirms pievienojiet lasītāju.");
-            return;
-        }
-        if (loanCopies.isEmpty()) {
-            LoanButton.setEnabled(false);
+            if (loanReaders.isEmpty()) {
+                LoanButton.setEnabled(false);
+                ReaderComboBox.setModel(new DefaultComboBoxModel<>());
+                BookComboBox.setModel(new DefaultComboBoxModel<>());
+                showInfo("Nav reģistrētu lasītāju. Vispirms pievienojiet lasītāju.");
+                return;
+            }
+            if (loanCopies.isEmpty()) {
+                LoanButton.setEnabled(false);
+                String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
+                ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
+                BookComboBox.setModel(new DefaultComboBoxModel<>());
+                showInfo("Nav pieejamu eksemplāru.");
+                return;
+            }
+            LoanButton.setEnabled(true);
+
             String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
+            String[] copyNames = loanCopies.stream().map(copy -> copy.getGramata().getNosaukums()
+                    + " (eksemplārs ID " + copy.getEksemplaraId() + ")").toArray(String[]::new);
             ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
-            BookComboBox.setModel(new DefaultComboBoxModel<>());
-            showInfo("Nav pieejamu eksemplāru.");
+            BookComboBox.setModel(new DefaultComboBoxModel<>(copyNames));
+            LoanDateTextField.setText(LocalDate.now().format(DATE_FORMAT));
+            LoanTimeFormattedTextField.setValue(LocalDate.now().plusDays(14).format(DATE_FORMAT));
+        } catch (Exception ex) {
+            showError(ex);
+        }
+    }
+
+    private void issueBook() {
+        if (!isStaff()) return;
+        int readerIndex = ReaderComboBox.getSelectedIndex();
+        int copyIndex = BookComboBox.getSelectedIndex();
+        if (readerIndex < 0 || copyIndex < 0) {
+            showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));
             return;
         }
-        LoanButton.setEnabled(true);
-
-        String[] readerNames = loanReaders.stream().map(Lietotajs::toString).toArray(String[]::new);
-        String[] copyNames = loanCopies.stream().map(copy -> copy.getGramata().getNosaukums()
-                + " (eksemplārs ID " + copy.getEksemplaraId() + ")").toArray(String[]::new);
-        ReaderComboBox.setModel(new DefaultComboBoxModel<>(readerNames));
-        BookComboBox.setModel(new DefaultComboBoxModel<>(copyNames));
-        LoanDateTextField.setText(LocalDate.now().format(DATE_FORMAT));
-        LoanTimeFormattedTextField.setValue(LocalDate.now().plusDays(14).format(DATE_FORMAT));
-    } catch (Exception ex) {
-        showError(ex);
+        try {
+            LoanTimeFormattedTextField.commitEdit();
+        } catch (java.text.ParseException ex) {
+            showError(new IllegalArgumentException("Nederīgs termiņa formāts. Izmantojiet GGGG-MM-DD."));
+            return;
+        }
+        try {
+            izsniegumsDAO.issueBook(loanReaders.get(readerIndex).getLietotajaId(),
+                    loanCopies.get(copyIndex).getEksemplaraId(),
+                    String.valueOf(LoanTimeFormattedTextField.getValue()), currentUser);
+            JOptionPane.showMessageDialog(LoanDialog, "Grāmata izsniegta.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+            returnToMain(LoanDialog);
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
-}
-
-private void issueBook() {
-    if (!isStaff()) return;
-    int readerIndex = ReaderComboBox.getSelectedIndex();
-    int copyIndex = BookComboBox.getSelectedIndex();
-    if (readerIndex < 0 || copyIndex < 0) {
-        showError(new IllegalArgumentException("Izvēlieties lasītāju un eksemplāru."));
-        return;
-    }
-    try {
-        LoanTimeFormattedTextField.commitEdit(); // Validē maskētā termiņa lauka vērtību.
-    } catch (java.text.ParseException ex) {
-        showError(new IllegalArgumentException("Nederīgs termiņa formāts. Izmantojiet GGGG-MM-DD."));
-        return;
-    }
-    try {
-        izsniegumsDAO.issueBook(loanReaders.get(readerIndex).getLietotajaId(),
-                loanCopies.get(copyIndex).getEksemplaraId(),
-                String.valueOf(LoanTimeFormattedTextField.getValue()), currentUser);
-        JOptionPane.showMessageDialog(LoanDialog, "Grāmata izsniegta.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
-        returnToMain(LoanDialog);
-    } catch (Exception ex) {
-        showError(ex);
-    }
-}
 
     private void openReturn() { openReturn(false); }
     private void openReturn(boolean overdueOnly) {
@@ -681,74 +559,74 @@ private void issueBook() {
         }
     }
 
-private void updateReservationActionButtons() {
-    boolean activeSelection = false;
-    int selectedViewRow = ReservationTable.getSelectedRow();
-    if (selectedViewRow >= 0) {
-        int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
-        Object statusValue = ReservationTable.getModel().getValueAt(selectedModelRow, 4);
-        activeSelection = statusValue != null && RezervacijaDAO.isActiveStatus(statusValue.toString());
-    }
-    boolean staff = isStaff();
-    boolean reader = isReader();
-    boolean ownsSelection = false;
-    if (selectedViewRow >= 0) {
-        int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
-        Object readerValue = ReservationTable.getModel().getValueAt(selectedModelRow, 1);
-        ownsSelection = readerValue instanceof Lietotajs
-                && currentUser != null
-                && ((Lietotajs) readerValue).getLietotajaId() == currentUser.getLietotajaId();
-    }
-    NewReservationButton.setEnabled(reader);
-    CancelReservationButton.setEnabled(reader && activeSelection && ownsSelection);
-    RunButton.setEnabled(staff && activeSelection);
-}
-
-private void createReservation() {
-    if (!isReader()) { showError(new SecurityException("Rezervāciju var izveidot tikai lasītājs.")); return; }
-    try {
-        reservationBooks.clear();
-        reservationBooks.addAll(rezervacijaDAO.findReservationBooks(currentUser));
-        if (reservationBooks.isEmpty()) {
-            showError(new IllegalStateException("Nav grāmatu rezervācijai."));
-            return;
+    private void updateReservationActionButtons() {
+        boolean activeSelection = false;
+        int selectedViewRow = ReservationTable.getSelectedRow();
+        if (selectedViewRow >= 0) {
+            int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
+            Object statusValue = ReservationTable.getModel().getValueAt(selectedModelRow, 4);
+            activeSelection = statusValue != null && RezervacijaDAO.isActiveStatus(statusValue.toString());
         }
-        String[] names = reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);
-        int selected = JOptionPane.showOptionDialog(ReservationDialog, "Izvēlieties grāmatu rezervācijai:",
-                "Jauna rezervācija", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                null, names, names[0]);
-        if (selected < 0) return;
-        rezervacijaDAO.createReservation(reservationBooks.get(selected).getGramatasId(), currentUser);
-        showInfo("Rezervācija izveidota.");
-        openReservations();
-    } catch (Exception ex) { showError(ex); }
-}
+        boolean staff = isStaff();
+        boolean reader = isReader();
+        boolean ownsSelection = false;
+        if (selectedViewRow >= 0) {
+            int selectedModelRow = ReservationTable.convertRowIndexToModel(selectedViewRow);
+            Object readerValue = ReservationTable.getModel().getValueAt(selectedModelRow, 1);
+            ownsSelection = readerValue instanceof Lietotajs
+                    && currentUser != null
+                    && ((Lietotajs) readerValue).getLietotajaId() == currentUser.getLietotajaId();
+        }
+        NewReservationButton.setEnabled(reader);
+        CancelReservationButton.setEnabled(reader && activeSelection && ownsSelection);
+        RunButton.setEnabled(staff && activeSelection);
+    }
 
-private void cancelSelectedReservation() {
-    if (!isReader()) { showError(new SecurityException("Rezervāciju var atcelt tās īpašnieks — lasītājs.")); return; }
-    int row = ReservationTable.getSelectedRow();
-    if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
-    int modelRow = ReservationTable.convertRowIndexToModel(row);
-    int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
-    try {
-        rezervacijaDAO.cancelReservation(id, currentUser);
-        showInfo("Rezervācija veiksmīgi atcelta.");
-        openReservations();
-    } catch (Exception ex) { showError(ex); }
-}
+    private void createReservation() {
+        if (!isReader()) { showError(new SecurityException("Rezervāciju var izveidot tikai lasītājs.")); return; }
+        try {
+            reservationBooks.clear();
+            reservationBooks.addAll(rezervacijaDAO.findReservationBooks(currentUser));
+            if (reservationBooks.isEmpty()) {
+                showError(new IllegalStateException("Nav grāmatu rezervācijai."));
+                return;
+            }
+            String[] names = reservationBooks.stream().map(Gramata::getNosaukums).toArray(String[]::new);
+            int selected = JOptionPane.showOptionDialog(ReservationDialog, "Izvēlieties grāmatu rezervācijai:",
+                    "Jauna rezervācija", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                    null, names, names[0]);
+            if (selected < 0) return;
+            rezervacijaDAO.createReservation(reservationBooks.get(selected).getGramatasId(), currentUser);
+            showInfo("Rezervācija izveidota.");
+            openReservations();
+        } catch (Exception ex) { showError(ex); }
+    }
 
-private void completeSelectedReservation() {
-    if (!isStaff()) { showError(new SecurityException("Rezervāciju var izpildīt bibliotekārs vai administrators.")); return; }
-    int row = ReservationTable.getSelectedRow();
-    if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
-    int modelRow = ReservationTable.convertRowIndexToModel(row);
-    int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
-    try {
-        rezervacijaDAO.completeReservation(id, currentUser);
-        showInfo("Rezervācija veiksmīgi izpildīta.");
-        openReservations();
-    } catch (Exception ex) { showError(ex); }
-}
+    private void cancelSelectedReservation() {
+        if (!isReader()) { showError(new SecurityException("Rezervāciju var atcelt tās īpašnieks — lasītājs.")); return; }
+        int row = ReservationTable.getSelectedRow();
+        if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
+        int modelRow = ReservationTable.convertRowIndexToModel(row);
+        int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
+        try {
+            rezervacijaDAO.cancelReservation(id, currentUser);
+            showInfo("Rezervācija veiksmīgi atcelta.");
+            openReservations();
+        } catch (Exception ex) { showError(ex); }
+    }
+
+    private void completeSelectedReservation() {
+        if (!isStaff()) { showError(new SecurityException("Rezervāciju var izpildīt bibliotekārs vai administrators.")); return; }
+        int row = ReservationTable.getSelectedRow();
+        if (row < 0) { showError(new IllegalArgumentException("Izvēlieties rezervāciju.")); return; }
+        int modelRow = ReservationTable.convertRowIndexToModel(row);
+        int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
+        try {
+            rezervacijaDAO.completeReservation(id, currentUser);
+            showInfo("Rezervācija veiksmīgi izpildīta.");
+            openReservations();
+        } catch (Exception ex) { showError(ex); }
+    }
 
     private void openNotifications() {
         if (currentUser == null) return;
@@ -1039,14 +917,11 @@ private void completeSelectedReservation() {
 
         LoginDialog.setResizable(false);
 
-
-
         UsernameTextField.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 UsernameTextFieldActionPerformed(evt);
             }
         });
-
 
         LoginButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1066,14 +941,12 @@ private void completeSelectedReservation() {
             }
         });
 
-
         AppLabel.setText("LibInfo - Bibliotēkas sistēma");
         UsernameLabel.setText("Lietotājvārds:");
         PasswordLabel.setText("Parole:");
         LoginButton.setText("Pieteikties");
         RegisterButton.setText("Reģistrēties");
         CloseButton.setText("Aizvērt");
-
 
         RegisterDialog.setResizable(false);
 
@@ -1105,8 +978,7 @@ private void completeSelectedReservation() {
             }
         });
 
-
-        BookListDialog.setResizable(false);
+        BookListDialog.setResizable(true);
         BookListDialog.setSize(new java.awt.Dimension(900, 600));
 
         BookTable.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -1172,7 +1044,6 @@ private void completeSelectedReservation() {
             }
         });
 
-
         BookNameLabel.setText("Vārds:");
 
         SaveBookButton.setText("Saglabāt");
@@ -1227,7 +1098,7 @@ private void completeSelectedReservation() {
 
         BookDescriptionTextArea.setColumns(20);
         BookDescriptionTextArea.setRows(5);
-        jScrollPane3.setViewportView(BookDescriptionTextArea);
+        jScrollPane3.setViewportText(BookDescriptionTextArea);
 
         BookAvailabilityLabel.setText("Sākotnējais eksemplārs:");
 
@@ -1237,7 +1108,6 @@ private void completeSelectedReservation() {
                 BookAvailabilityCheckBoxActionPerformed(evt);
             }
         });
-
 
         UserTable.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         UserTable.setModel(new javax.swing.table.DefaultTableModel(
@@ -1284,7 +1154,6 @@ private void completeSelectedReservation() {
             }
         });
 
-
         UserSearchButton.setText("Meklēt:");
         UserSearchButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1305,7 +1174,6 @@ private void completeSelectedReservation() {
                 EditUserRoleButtonActionPerformed(evt);
             }
         });
-
 
         UserEditDialog.setSize(new java.awt.Dimension(450, 450));
 
@@ -1348,7 +1216,6 @@ private void completeSelectedReservation() {
             }
         });
 
-
         ReaderLabel.setText("Lasītājs:");
 
         BookComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
@@ -1364,7 +1231,6 @@ private void completeSelectedReservation() {
         LoanButton.setText("Izsniegt");
 
         ReturnButton4.setText("Atcelt");
-
 
         ReturnLabel.setText("Aktīvie izsniegumi");
 
@@ -1396,7 +1262,6 @@ private void completeSelectedReservation() {
         });
 
         jButton19.setText("Atcelt");
-
 
         ReservationLabel.setText("Rezervāciju saraksts");
 
@@ -1448,7 +1313,6 @@ private void completeSelectedReservation() {
             }
         });
 
-
         NotificationLabel.setText("Mani paziņojumi");
 
         NotificationTable.setModel(new javax.swing.table.DefaultTableModel(
@@ -1477,7 +1341,6 @@ private void completeSelectedReservation() {
         ReadButton.setText("Atzīmēt kā izlasītu");
 
         CloseButton4.setText("Aizvērt");
-
 
         setTitle("LibInfo - Galvenais logs");
 
@@ -1572,7 +1435,6 @@ private void completeSelectedReservation() {
         ActionsMenuBar.add(HelpMenu);
 
         setJMenuBar(ActionsMenuBar);
-
 
         LoginDialogSurface.setBackground(new java.awt.Color(240, 240, 240));
         AppLabel.setText("LibInfo - Bibliotēkas sistēma");
@@ -1861,6 +1723,160 @@ private void completeSelectedReservation() {
         ReturnTable.setFillsViewportHeight(true);
         ReservationTable.setFillsViewportHeight(true);
         NotificationTable.setFillsViewportHeight(true);
+
+        // ============================================================
+        // LibInfo: Logu īpašības un klausītāji (agrāk configureDialogs / configureMenus)
+        // ============================================================
+        setTitle("LibInfo - Galvenā izvēlne");
+        setDefaultCloseOperation(javax.swing.JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); }
+        });
+
+        LoginDialog.setTitle("LibInfo - Pieteikšanās");
+        LoginDialog.setModal(false);
+        LoginDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        LoginDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { exitApplication(); }
+        });
+
+        RegisterDialog.setTitle("LibInfo - Reģistrācija");
+        RegisterDialog.setModal(false);
+        RegisterDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        RegisterDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { showLogin(); }
+        });
+
+        BookListDialog.setTitle("LibInfo - Grāmatu saraksts");
+        BookListDialog.setResizable(true);
+        BookListDialog.setModal(false);
+        BookListDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        BookListDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookListDialog); }
+        });
+
+        BookEditDialog.setTitle("LibInfo - Grāmata");
+        BookEditDialog.setModal(false);
+        BookEditDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        BookEditDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(BookEditDialog); }
+        });
+
+        UserListFrameDialog.setTitle("LibInfo - Lietotāji");
+        UserListFrameDialog.setResizable(true);
+        UserListFrameDialog.setModal(false);
+        UserListFrameDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        UserListFrameDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserListFrameDialog); }
+        });
+
+        UserEditDialog.setTitle("LibInfo - Lietotājs");
+        UserEditDialog.setModal(false);
+        UserEditDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        UserEditDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(UserEditDialog); }
+        });
+
+        LoanDialog.setTitle("LibInfo - Izsniegt grāmatu");
+        LoanDialog.setModal(false);
+        LoanDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        LoanDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(LoanDialog); }
+        });
+
+        ReturnDialog.setTitle("LibInfo - Atgriezt grāmatu");
+        ReturnDialog.setResizable(true);
+        ReturnDialog.setModal(false);
+        ReturnDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        ReturnDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReturnDialog); }
+        });
+
+        ReservationDialog.setTitle("LibInfo - Rezervācijas");
+        ReservationDialog.setResizable(true);
+        ReservationDialog.setModal(false);
+        ReservationDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        ReservationDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(ReservationDialog); }
+        });
+
+        NotificationDialog.setTitle("LibInfo - Paziņojumi");
+        NotificationDialog.setResizable(true);
+        NotificationDialog.setModal(false);
+        NotificationDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+        NotificationDialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); }
+        });
+
+        // ============================================================
+        // LibInfo: BookYearSpinner, tooltips, maska
+        // ============================================================
+        int currentYear = java.time.LocalDate.now().getYear();
+        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
+        BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
+        ((javax.swing.JSpinner.DefaultEditor) BookYearSpinner.getEditor()).getTextField()
+                .getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+        });
+        BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
+
+        LoanDateTextField.setEditable(false);
+        LoanDateTextField.setToolTipText("Sistēma automātiski reģistrē izsniegšanas datumu.");
+        try {
+            javax.swing.text.MaskFormatter loanMask = new javax.swing.text.MaskFormatter("####-##-##");
+            loanMask.setPlaceholderCharacter('_');
+            LoanTimeFormattedTextField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(loanMask));
+        } catch (java.text.ParseException ex) {
+            // Nevar notikt ar fiksētu masku
+        }
+
+        // ============================================================
+        // LibInfo: pogu klausītāji (agrāk configureDialogs)
+        // ============================================================
+        BookAddButton.addActionListener(e -> openNewBook());
+        BookLoanButton.addActionListener(e -> openLoan());
+        BookReturnButton.addActionListener(e -> openReturn());
+        UserListButton.addActionListener(e -> openUserList());
+        ReservationButton.addActionListener(e -> openReservations());
+        CloseButton1.addActionListener(e -> exitApplication());
+
+        DeleteButton.addActionListener(e -> deleteSelectedBook());
+
+        LoanButton.addActionListener(e -> issueBook());
+        ReturnButton4.addActionListener(e -> returnToMain(LoanDialog));
+
+        jButton19.addActionListener(e -> returnToMain(ReturnDialog));
+
+        CloseButton3.addActionListener(e -> returnToMain(ReservationDialog));
+
+        ReadButton.addActionListener(e -> markNotificationRead());
+        CloseButton4.addActionListener(e -> returnToMain(NotificationDialog));
+
+        ReservationTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) updateReservationActionButtons();
+        });
+        ReservationTable.setToolTipText("Lai atceltu vai izpildītu rezervāciju, vispirms atlasiet aktīvo ierakstu.");
+        CancelReservationButton.setToolTipText("Atcelt atlasīto aktīvo rezervāciju.");
+        RunButton.setToolTipText("Atzīmēt atlasīto aktīvo rezervāciju kā izpildītu.");
+
+        // ============================================================
+        // LibInfo: izvēļņu klausītāji (agrāk configureMenus)
+        // ============================================================
+        menuExitItem.addActionListener(e -> exitApplication());
+        menuBooksItem.addActionListener(e -> openBookList());
+        menuAddBookItem.addActionListener(e -> openNewBook());
+        menuSearchBookItem.addActionListener(e -> openBookList());
+        menuUsersItem.addActionListener(e -> openUserList());
+        menuAddUserItem.addActionListener(e -> openNewUser());
+        menuIssueItem.addActionListener(e -> openLoan());
+        menuReturnItem.addActionListener(e -> openReturn());
+        menuOverdueItem.addActionListener(e -> openReturn(true));
+        menuReservationsItem.addActionListener(e -> openReservations());
+        menuNotificationsItem.addActionListener(e -> openNotifications());
+        menuAboutItem.addActionListener(e -> showInfo("LibInfo - bibliotēkas informācijas sistēma. Java Swing + Apache Derby."));
+
         javax.swing.GroupLayout LoginDialogSurfaceLayout = new javax.swing.GroupLayout(LoginDialogSurface);
         LoginDialogSurface.setLayout(LoginDialogSurfaceLayout);
         LoginDialogSurfaceLayout.setHorizontalGroup(
@@ -3042,7 +3058,9 @@ private void completeSelectedReservation() {
         .addComponent(MainFrameSurface, javax.swing.GroupLayout.PREFERRED_SIZE, 540, javax.swing.GroupLayout.PREFERRED_SIZE)
         .addGap(0, 0, Short.MAX_VALUE))
         );
+
         pack();
+        setVisible(false);
     }// </editor-fold>//GEN-END:initComponents
 
     private void RegisterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterButtonActionPerformed
