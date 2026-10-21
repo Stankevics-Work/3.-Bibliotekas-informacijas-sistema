@@ -1098,7 +1098,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
 
         BookDescriptionTextArea.setColumns(20);
         BookDescriptionTextArea.setRows(5);
-        jScrollPane3.setViewportText(BookDescriptionTextArea);
+        jScrollPane3.setViewportView(BookDescriptionTextArea);
 
         BookAvailabilityLabel.setText("Sākotnējais eksemplārs:");
 
@@ -1812,14 +1812,18 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         // LibInfo: BookYearSpinner, tooltips, maska
         // ============================================================
         int currentYear = java.time.LocalDate.now().getYear();
-        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
-        BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
-        ((javax.swing.JSpinner.DefaultEditor) BookYearSpinner.getEditor()).getTextField()
-                .getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-        });
+		BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
+		// Formatēt gadu bez tūkstošu atdalītāja: 2026, nevis "2,026"
+		javax.swing.JSpinner.NumberEditor yearEditor =
+        new javax.swing.JSpinner.NumberEditor(BookYearSpinner, "0");
+		BookYearSpinner.setEditor(yearEditor);
+		BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
+		yearEditor.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+		public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+		public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+		public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+});
+		
         BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
 
         LoanDateTextField.setEditable(false);
