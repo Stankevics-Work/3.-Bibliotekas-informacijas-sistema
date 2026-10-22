@@ -121,3 +121,9 @@ UPDATE gramata SET pieejamiba = CASE WHEN EXISTS (
     SELECT 1 FROM eksemplars e
     WHERE e.gramatas_id = gramata.gramatas_id AND e.status = 'pieejams'
 ) THEN TRUE ELSE FALSE END WHERE gramatas_id = o.gramatas_id;
+
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES
+('Administrators', 'Sistēmas', 'admin', 'admin123', 'admin@libinfo.lv', 'ADMIN'),
+('Bibliotekārs', 'Darbinieks', 'bibliotekars', 'Test123!', 'bib@libinfo.lv', 'LIBRARIAN'),
+('Lasītājs', 'Lietotājs', 'lasitajs', 'Test123!', 'lasitajs@libinfo.lv', 'READER'),
+('Autors', 'Rakstnieks', 'autors', 'Test123!', 'autors@libinfo.lv', 'AUTHOR');

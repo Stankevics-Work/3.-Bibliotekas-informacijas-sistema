@@ -23,17 +23,17 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import bibliotekas_informacijas_sistema.model.Eksemplars;
-import bibliotekas_informacijas_sistema.model.Gramata;
-import bibliotekas_informacijas_sistema.model.Izsniegums;
-import bibliotekas_informacijas_sistema.model.Lietotajs;
-import bibliotekas_informacijas_sistema.model.Loma;
-import bibliotekas_informacijas_sistema.model.Rezervacija;
-import bibliotekas_informacijas_sistema.dao.RezervacijaDAO;
-import bibliotekas_informacijas_sistema.dao.LietotajsDAO;
-import bibliotekas_informacijas_sistema.dao.GramataDAO;
-import bibliotekas_informacijas_sistema.dao.EksemplarsDAO;
-import bibliotekas_informacijas_sistema.dao.IzsniegumsDAO;
+import model.Eksemplars;
+import model.Gramata;
+import model.Izsniegums;
+import model.Lietotajs;
+import model.Loma;
+import model.Rezervacija;
+import dao.RezervacijaDAO;
+import dao.LietotajsDAO;
+import dao.GramataDAO;
+import dao.EksemplarsDAO;
+import dao.IzsniegumsDAO;
 
 
 public class LibInfoSaskarne extends javax.swing.JFrame {
@@ -1725,8 +1725,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         NotificationTable.setFillsViewportHeight(true);
 
         // ============================================================
-        // LibInfo: Logu īpašības un klausītāji (agrāk configureDialogs / configureMenus)
+        // Custom UI (logu īpašības, klausītāji, spinneris, tooltips, maska)
+        // tagad atrodas tieši šeit, initComponents() iekšienē.
         // ============================================================
+
+        // Logu īpašības un klausītāji
         setTitle("LibInfo - Galvenā izvēlne");
         setDefaultCloseOperation(javax.swing.JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -1808,22 +1811,20 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             @Override public void windowClosing(java.awt.event.WindowEvent e) { returnToMain(NotificationDialog); }
         });
 
-        // ============================================================
-        // LibInfo: BookYearSpinner, tooltips, maska
-        // ============================================================
+        // BookYearSpinner, tooltips, maska
         int currentYear = java.time.LocalDate.now().getYear();
-		BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
-		// Formatēt gadu bez tūkstošu atdalītāja: 2026, nevis "2,026"
-		javax.swing.JSpinner.NumberEditor yearEditor =
-        new javax.swing.JSpinner.NumberEditor(BookYearSpinner, "0");
-		BookYearSpinner.setEditor(yearEditor);
-		BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
-		yearEditor.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-		public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-		public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-		public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
-});
-		
+        BookYearSpinner.setModel(new javax.swing.SpinnerNumberModel(currentYear, 1800, 2100, 1));
+        // Formatēt gadu bez tūkstošu atdalītāja: 2026, nevis "2,026"
+        javax.swing.JSpinner.NumberEditor yearEditor =
+                new javax.swing.JSpinner.NumberEditor(BookYearSpinner, "0");
+        BookYearSpinner.setEditor(yearEditor);
+        BookYearSpinner.addChangeListener(e -> bookYearEdited = true);
+        yearEditor.getTextField().getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { bookYearEdited = true; }
+        });
+
         BookAvailabilityCheckBox.setToolTipText("Šī izvēle attiecas uz jaunu grāmatu. Esošo eksemplāru pieejamību nosaka izsniegumi.");
 
         LoanDateTextField.setEditable(false);
@@ -1836,9 +1837,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             // Nevar notikt ar fiksētu masku
         }
 
-        // ============================================================
-        // LibInfo: pogu klausītāji (agrāk configureDialogs)
-        // ============================================================
+        // Pogas klausītāji
         BookAddButton.addActionListener(e -> openNewBook());
         BookLoanButton.addActionListener(e -> openLoan());
         BookReturnButton.addActionListener(e -> openReturn());
@@ -1865,9 +1864,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         CancelReservationButton.setToolTipText("Atcelt atlasīto aktīvo rezervāciju.");
         RunButton.setToolTipText("Atzīmēt atlasīto aktīvo rezervāciju kā izpildītu.");
 
-        // ============================================================
-        // LibInfo: izvēļņu klausītāji (agrāk configureMenus)
-        // ============================================================
+        // Izvēļņu klausītāji
         menuExitItem.addActionListener(e -> exitApplication());
         menuBooksItem.addActionListener(e -> openBookList());
         menuAddBookItem.addActionListener(e -> openNewBook());

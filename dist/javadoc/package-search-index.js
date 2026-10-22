@@ -1,1 +1,0 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"bibliotekas_informacijas_sistema"},{"l":"bibliotekas_informacijas_sistema.dao"},{"l":"bibliotekas_informacijas_sistema.db"},{"l":"bibliotekas_informacijas_sistema.model"},{"l":"bibliotekas_informacijas_sistema.util"}];updateSearchResults();

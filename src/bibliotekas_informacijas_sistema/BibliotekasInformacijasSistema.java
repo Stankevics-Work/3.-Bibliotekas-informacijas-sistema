@@ -1,7 +1,7 @@
 package bibliotekas_informacijas_sistema;
 
 import java.sql.SQLException;
-import bibliotekas_informacijas_sistema.dao.LietotajsDAO;
+import dao.LietotajsDAO;
 
 /** Datu sagatavošana. Vienīgais lietotnes main ir LibInfoSaskarne klasē. */
 public final class BibliotekasInformacijasSistema {

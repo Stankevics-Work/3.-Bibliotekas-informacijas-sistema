@@ -1,12 +1,140 @@
-/build/
-/dist/
-/target/
-/nbproject/private/
-*.class
-*.log
-.env
+# ============================================================
+#  .gitignore — Bibliotēkas informācijas sistēma
+#  Java + Derby (Embedded) + NetBeans (Ant/Maven)
+# ============================================================
 
+# ------------------------------------------------------------
+#  Datubāze (Derby Embedded)
+#  DB faili ir bināri un katram jāģenerē lokāli.
+#  DatabaseManager.initialize() izveido DB no resursa /schema.sql.
+#  Vienīgais fails, ko commitojam lib_db/ mapē, ir README
+#  (placeholder, ko DatabaseManager atpazīst un izdzēš pirms
+#  Derby create=true).
+# ------------------------------------------------------------
 /lib_db/*
 !/lib_db/README_DO_NOT_TOUCH_FILES.txt
 derby.log
-hs_err_pid*.log
+*.lck
+
+# ------------------------------------------------------------
+#  Kompilēšanas izvades mapes
+# ------------------------------------------------------------
+/build/
+/dist/
+/target/
+/out/
+/bin/
+*.jar
+!lib/*.jar
+
+# ------------------------------------------------------------
+#  Java klases un citi kompilētie faili
+# ------------------------------------------------------------
+*.class
+*.war
+*.ear
+*.nar
+
+# ------------------------------------------------------------
+#  NetBeans
+# ------------------------------------------------------------
+/nbproject/private/
+/nbproject/.lock
+nbproject/private/
+build.xml~
+*.nbattrs
+
+# ------------------------------------------------------------
+#  IntelliJ IDEA
+# ------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ------------------------------------------------------------
+#  Eclipse
+# ------------------------------------------------------------
+.classpath
+.project
+.settings/
+.metadata/
+
+# ------------------------------------------------------------
+#  VS Code
+# ------------------------------------------------------------
+.vscode/
+*.code-workspace
+
+# ------------------------------------------------------------
+#  macOS
+# ------------------------------------------------------------
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# ------------------------------------------------------------
+#  Windows
+# ------------------------------------------------------------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ------------------------------------------------------------
+#  Linux
+# ------------------------------------------------------------
+*~
+.directory
+.Trash-*
+
+# ------------------------------------------------------------
+#  Žurnālfaili un atkritumi
+# ------------------------------------------------------------
+*.log
+hs_err_pid*
+replay_pid*
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ------------------------------------------------------------
+#  Vides mainīgie un noslēpumi
+#  (paroles, atslēgas — NEKAD necommito!)
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.properties.local
+config.local.*
+secrets/
+
+# ------------------------------------------------------------
+#  Testu un pārklājuma izvades
+# ------------------------------------------------------------
+/test-output/
+/surefire-reports/
+*.testresults
+coverage/
+.coverage
+
+# ------------------------------------------------------------
+#  Gradle (ja izmanto)
+# ------------------------------------------------------------
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# ------------------------------------------------------------
+#  Citi pagaidu faili
+# ------------------------------------------------------------
+*.orig
+*.rej
+*.pid
+*.seed

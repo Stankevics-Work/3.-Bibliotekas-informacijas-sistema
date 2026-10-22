@@ -1,5 +1,9 @@
 package bibliotekas_informacijas_sistema;
 
+import dao.GramataDAO;
+import dao.LietotajsDAO;
+import model.Lietotajs;
+import model.Gramata;
 import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.*;
@@ -9,8 +13,6 @@ import java.util.concurrent.Callable;
 import javax.swing.*;
 import org.junit.*;
 import static org.junit.Assert.*;
-import bibliotekas_informacijas_sistema.dao.*;
-import bibliotekas_informacijas_sistema.model.*;
 
 public class QuickGuiFlowTest {
     LibInfoSaskarne app;
