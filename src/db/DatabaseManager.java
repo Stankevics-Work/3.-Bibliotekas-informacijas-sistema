@@ -4,6 +4,9 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import util.PasswordUtil;
 
 /** Derby savienojuma pārvaldība un shēmas izveide/migrācija. */
 public final class DatabaseManager {
@@ -95,12 +98,13 @@ public final class DatabaseManager {
                 s.executeQuery("SELECT * FROM gramatu_katalogs WHERE 1=0").close();
             }
             ensureNotificationReadTable(c);
+            migrateLegacyPasswords(c);
             return;
         }
         if (present != 0) throw new SQLException("Datubāzes shēma ir nepilnīga, pārbaudiet tabulas");
 
         String sql;
-        try (InputStream in = DatabaseManager.class.getResourceAsStream("/schema.sql")) {
+        try (InputStream in = DatabaseManager.class.getResourceAsStream("/bibliotekas_informacijas_sistema/schema.sql")) {
             if (in == null) throw new IOException("Nav atrasts schema.sql");
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[4096]; int n;
@@ -112,8 +116,11 @@ public final class DatabaseManager {
 
         c.setAutoCommit(false);
         try (Statement s = c.createStatement()) {
+            sql = sql.replaceAll("(?m)^--.*$", ""); 
             for (String command : sql.split(";")) {
-                if (!command.trim().isEmpty()) s.executeUpdate(command.trim());
+                if (!command.trim().isEmpty()) {
+                    s.executeUpdate(command.trim());
+                }
             }
             c.commit();
         } catch (SQLException ex) {
@@ -123,6 +130,54 @@ public final class DatabaseManager {
             c.setAutoCommit(true);
         }
         ensureNotificationReadTable(c);
+        migrateLegacyPasswords(c);
+    }
+
+    /**
+     * Migrē vecajās instalācijās glabātās paroles no atklāta teksta uz BCrypt.
+     * Parole pati netiek mainīta, tāpēc lietotāji var pieteikties ar līdzšinējo paroli.
+     */
+    private static void migrateLegacyPasswords(Connection c) throws SQLException {
+        List<LegacyPassword> legacyPasswords = new ArrayList<>();
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT lietotaja_id, parole FROM lietotajs");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String password = rs.getString("parole");
+                if (password != null && !password.isBlank()
+                        && !PasswordUtil.isBcryptHash(password)
+                        && !password.startsWith("$2")) {
+                    legacyPasswords.add(new LegacyPassword(rs.getInt("lietotaja_id"), password));
+                }
+            }
+        }
+
+        try (PreparedStatement ps = c.prepareStatement(
+                "UPDATE lietotajs SET parole = ? WHERE lietotaja_id = ? AND parole = ?")) {
+            for (LegacyPassword legacy : legacyPasswords) {
+                final String hash;
+                try {
+                    hash = PasswordUtil.hash(legacy.password);
+                } catch (IllegalArgumentException ex) {
+                    // Neatbalstāmās vērtības nemainām, lai datubāzes palaišana netiktu bloķēta.
+                    continue;
+                }
+                ps.setString(1, hash);
+                ps.setInt(2, legacy.userId);
+                ps.setString(3, legacy.password);
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    private static final class LegacyPassword {
+        private final int userId;
+        private final String password;
+
+        private LegacyPassword(int userId, String password) {
+            this.userId = userId;
+            this.password = password;
+        }
     }
 
     /** Atpakaļsaderīga shēmas migrācija vecākām instalācijām. */

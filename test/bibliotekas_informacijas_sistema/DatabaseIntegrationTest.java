@@ -85,6 +85,44 @@ public class DatabaseIntegrationTest {
         new IzsniegumsDAO(connection).insert(value, actor()); return value;
     }
 
+    @Test public void legacyPlaintextPasswordsAreMigratedToBcrypt() throws Exception {
+        LietotajsDAO users = new LietotajsDAO(connection);
+        String[][] credentials = {
+            {"admin", "admin123"},
+            {"bibliotekars", "Test123!"},
+            {"lasitajs", "Test123!"},
+            {"autors", "Test123!"}
+        };
+        for (String[] credential : credentials) {
+            Lietotajs user = users.findByUsername(credential[0]);
+            assertNotNull("Sākotnējam kontam jābūt pieejamam: " + credential[0], user);
+            assertTrue("Parolei jābūt migrētai uz BCrypt: " + credential[0],
+                    PasswordUtil.isBcryptHash(user.getParole()));
+            assertTrue("Vecajai parolei jāturpina darboties: " + credential[0],
+                    PasswordUtil.verify(credential[1], user.getParole()));
+        }
+    }
+
+    @Test public void loginUpgradesLegacyPlaintextPasswordEvenIfStartupMigrationWasSkipped() throws Exception {
+        // Simulē vecu datubāzi, kuras lietotāja parole joprojām ir atklātā tekstā.
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE lietotajs SET parole = ? WHERE lietotajvards = ?")) {
+            ps.setString(1, "admin123");
+            ps.setString(2, "admin");
+            assertEquals(1, ps.executeUpdate());
+        }
+
+        Lietotajs authenticated = new LietotajsDAO().authenticate("ADMIN", "admin123");
+        assertNotNull(authenticated);
+        assertEquals("admin", authenticated.getLietotajvards());
+        assertNull("Sesijas objektā paroli nedrīkst atstāt", authenticated.getParole());
+
+        Lietotajs saved = new LietotajsDAO(connection).findByUsername("admin");
+        assertTrue("Pēc pieteikšanās vecajai parolei jābūt pārveidotai par BCrypt",
+                PasswordUtil.isBcryptHash(saved.getParole()));
+        assertTrue(PasswordUtil.verify("admin123", saved.getParole()));
+    }
+
     @Test public void initializationAndPersistence() throws Exception {
         assertTrue(DatabaseManager.testConnection(connection));
         DatabaseManager.initialize(connection);
@@ -211,7 +249,7 @@ public class DatabaseIntegrationTest {
     }
 
     @Test public void crudAndLoanLifecycle() throws Exception {
-        Lietotajs user = reader("lasitajs");
+        Lietotajs user = reader("crud_reader");
         LietotajsDAO users = new LietotajsDAO(connection);
         assertTrue(PasswordUtil.verify("Test123!", users.findByUsername("lasitajs").getParole()));
         user.setVards("Peteris"); assertTrue(users.update(user));

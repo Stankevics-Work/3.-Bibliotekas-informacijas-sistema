@@ -95,13 +95,14 @@ JOIN lietotajs l ON l.lietotaja_id = i.lietotaja_id
 JOIN eksemplars e ON e.eksemplara_id = i.eksemplara_id
 JOIN gramata g ON g.gramatas_id = e.gramatas_id
 WHERE i.atgriezts IS NULL AND i.termins < CURRENT_TIMESTAMP;
+
 CREATE TRIGGER pieejamiba_insert
 AFTER INSERT ON eksemplars
 REFERENCING NEW AS n
 FOR EACH ROW MODE DB2SQL
 UPDATE gramata SET pieejamiba = CASE WHEN EXISTS (
     SELECT 1 FROM eksemplars e
-    WHERE e.gramatas_id = gramata.gramatas_id AND e.status = 'pieejams'
+    WHERE e.gramatas_id = n.gramatas_id AND e.status = 'pieejams'
 ) THEN TRUE ELSE FALSE END WHERE gramatas_id = n.gramatas_id;
 
 CREATE TRIGGER pieejamiba_update
@@ -110,7 +111,7 @@ REFERENCING NEW AS n
 FOR EACH ROW MODE DB2SQL
 UPDATE gramata SET pieejamiba = CASE WHEN EXISTS (
     SELECT 1 FROM eksemplars e
-    WHERE e.gramatas_id = gramata.gramatas_id AND e.status = 'pieejams'
+    WHERE e.gramatas_id = n.gramatas_id AND e.status = 'pieejams'
 ) THEN TRUE ELSE FALSE END WHERE gramatas_id = n.gramatas_id;
 
 CREATE TRIGGER pieejamiba_delete
@@ -119,11 +120,10 @@ REFERENCING OLD AS o
 FOR EACH ROW MODE DB2SQL
 UPDATE gramata SET pieejamiba = CASE WHEN EXISTS (
     SELECT 1 FROM eksemplars e
-    WHERE e.gramatas_id = gramata.gramatas_id AND e.status = 'pieejams'
+    WHERE e.gramatas_id = o.gramatas_id AND e.status = 'pieejams'
 ) THEN TRUE ELSE FALSE END WHERE gramatas_id = o.gramatas_id;
 
-INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES
-('Administrators', 'Sistēmas', 'admin', 'admin123', 'admin@libinfo.lv', 'ADMIN'),
-('Bibliotekārs', 'Darbinieks', 'bibliotekars', 'Test123!', 'bib@libinfo.lv', 'LIBRARIAN'),
-('Lasītājs', 'Lietotājs', 'lasitajs', 'Test123!', 'lasitajs@libinfo.lv', 'READER'),
-('Autors', 'Rakstnieks', 'autors', 'Test123!', 'autors@libinfo.lv', 'AUTHOR');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Administrators', 'Sistēmas', 'admin', 'admin123', 'admin@libinfo.lv', 'ADMIN');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Bibliotekārs', 'Darbinieks', 'bibliotekars', 'Test123!', 'bib@libinfo.lv', 'LIBRARIAN');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Lasītājs', 'Lietotājs', 'lasitajs', 'Test123!', 'lasitajs@libinfo.lv', 'READER');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Autors', 'Rakstnieks', 'autors', 'Test123!', 'autors@libinfo.lv', 'AUTHOR');

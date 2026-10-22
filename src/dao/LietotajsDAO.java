@@ -259,8 +259,48 @@ public class LietotajsDAO {
     public Lietotajs authenticate(String username, String password) throws SQLException {
         if (blank(username) || blank(password)) throw new IllegalArgumentException("Ievadiet lietotājvārdu un paroli.");
         return withConnection(connection -> {
-            Lietotajs user = new LietotajsDAO(connection).findByUsername(username.trim());
-            if (user == null || !PasswordUtil.verify(password, user.getParole())) {
+            LietotajsDAO dao = new LietotajsDAO(connection);
+            String normalizedUsername = username.trim();
+            Lietotajs user = dao.findByUsername(normalizedUsername);
+            if (user == null) {
+                // Lietotājvārds nav reģistrjutīgs, bet parole joprojām ir reģistrjutīga.
+                List<Lietotajs> caseInsensitiveMatches = dao.query(
+                        "SELECT * FROM lietotajs WHERE LOWER(lietotajvards) = LOWER(?)",
+                        normalizedUsername);
+                // Ja datubāzē ir divi konti, kas atšķiras tikai ar lielajiem/mazajiem
+                // burtiem, pieteikšanos noraidām, nevis izvēlamies kontu patvaļīgi.
+                if (caseInsensitiveMatches.size() == 1) {
+                    user = caseInsensitiveMatches.get(0);
+                }
+            }
+            if (user == null) {
+                throw new SecurityException("Nepareizs lietotājvārds vai parole.");
+            }
+
+            String storedPassword = user.getParole();
+            boolean passwordMatches = PasswordUtil.verify(password, storedPassword);
+
+            /*
+             * Drošības atpakaļsaderība: dažās jau izveidotās Derby datubāzēs parole
+             * joprojām var būt saglabāta atklātā tekstā, ja palaišanas migrācija nav
+             * izpildījusies. Precīzu sakritību pieņem tikai vecajam, ne-BCrypt ierakstam
+             * un uzreiz pārveido par BCrypt, lai turpmāk netiktu glabāts atklāts teksts.
+             */
+            if (!passwordMatches && storedPassword != null
+                    && !storedPassword.startsWith("$2")
+                    && storedPassword.equals(password)) {
+                String upgradedHash = PasswordUtil.hash(password);
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "UPDATE lietotajs SET parole = ? WHERE lietotaja_id = ? AND parole = ?")) {
+                    ps.setString(1, upgradedHash);
+                    ps.setInt(2, user.getLietotajaId());
+                    ps.setString(3, storedPassword);
+                    passwordMatches = ps.executeUpdate() == 1;
+                }
+                if (passwordMatches) user.setParole(upgradedHash);
+            }
+
+            if (!passwordMatches) {
                 throw new SecurityException("Nepareizs lietotājvārds vai parole.");
             }
             user.setParole(null);
