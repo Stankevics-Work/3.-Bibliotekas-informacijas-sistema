@@ -4,16 +4,6 @@
 # ============================================================
 
 # ------------------------------------------------------------
-#  Datubāze (Derby Embedded)
-#  DB faili ir bināri un katram jāģenerē lokāli.
-#  DatabaseManager.initialize() izveido DB no resursa /schema.sql.
-# ------------------------------------------------------------
-/lib_db/*
-!/lib_db/README_DO_NOT_TOUCH_FILES.txt
-derby.log
-*.lck
-
-# ------------------------------------------------------------
 #  Kompilēšanas izvades mapes
 # ------------------------------------------------------------
 /build/
@@ -135,3 +125,9 @@ gradle-app.setting
 *.rej
 *.pid
 *.seed
+
+# ------------------------------------------------------------
+#  PRIVILEĢĒTĀ ATĻAUJA: Piespiedu kārtā iekļauj VISU lib_db mapi
+# ------------------------------------------------------------
+!/lib_db/
+!/lib_db/**
