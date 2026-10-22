@@ -8,7 +8,8 @@
 #  DB faili ir bināri un katram jāģenerē lokāli.
 #  DatabaseManager.initialize() izveido DB no resursa /schema.sql.
 # ------------------------------------------------------------
-/lib_db/
+/lib_db/*
+!/lib_db/README_DO_NOT_TOUCH_FILES.txt
 derby.log
 *.lck
 
