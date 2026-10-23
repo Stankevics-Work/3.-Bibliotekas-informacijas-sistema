@@ -268,7 +268,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             if (!loadBookChoices()) return;
             editingBookId = id;
             fillBookFields(book);
-            BookAvailabilityCheckBox.setEnabled(false);
+            BookAvailabilityCheckBox.setEnabled(true);
             BookEditDialog.setTitle("LibInfo - Rediģēt grāmatu");
             showDialog(BookEditDialog);
         } catch (Exception ex) {
@@ -3153,7 +3153,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }//GEN-LAST:event_CloseButton2ActionPerformed
 
     private void BookAvailabilityCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BookAvailabilityCheckBoxActionPerformed
-        // Izvēle tiek nolasīta saglabāšanas laikā; datubāzes statusu nosaka eksemplāri.
+    if (editingBookId > 0) {
+    boolean now = BookAvailabilityCheckBox.isSelected();
+    BookAvailabilityCheckBox.setToolTipText(now
+            ? "Grāmata tiks atzīmēta kā pieejama."
+            : "Grāmata tiks atzīmēta kā nepieejama. Esošie izsniegumi netiek mainīti.");
+    }
     }//GEN-LAST:event_BookAvailabilityCheckBoxActionPerformed
 
     private void UserRoleComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UserRoleComboBoxActionPerformed

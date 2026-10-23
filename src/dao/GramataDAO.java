@@ -61,6 +61,7 @@ public class GramataDAO {
         return query("SELECT * FROM gramata ORDER BY gramatas_id");
     }
 
+    /** Piesaista visus 7 laukus, ieskaitot pieejamiba. */
     private void bind(PreparedStatement ps, Gramata value) throws SQLException {
         ps.setString(1, value.getNosaukums());
         ps.setString(2, value.getApraksts());
@@ -68,11 +69,13 @@ public class GramataDAO {
         ps.setString(4, value.getIsbn());
         ps.setString(5, value.getKategorija());
         ps.setString(6, value.getAutors());
+        ps.setBoolean(7, value.isPieejama());
     }
 
     public int insert(Gramata value) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO gramata (nosaukums, apraksts, izdosanas_gads, isbn, kategorija, autors) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO gramata (nosaukums, apraksts, izdosanas_gads, isbn, kategorija, autors, pieejamiba) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 Statement.RETURN_GENERATED_KEYS)) {
             bind(ps, value); ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -84,8 +87,9 @@ public class GramataDAO {
 
     public boolean update(Gramata value) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(
-                "UPDATE gramata SET nosaukums = ?, apraksts = ?, izdosanas_gads = ?, isbn = ?, kategorija = ?, autors = ? WHERE gramatas_id = ?")) {
-            bind(ps, value); ps.setInt(7, value.getGramatasId());
+                "UPDATE gramata SET nosaukums = ?, apraksts = ?, izdosanas_gads = ?, isbn = ?, "
+                + "kategorija = ?, autors = ?, pieejamiba = ? WHERE gramatas_id = ?")) {
+            bind(ps, value); ps.setInt(8, value.getGramatasId());
             return ps.executeUpdate() == 1;
         }
     }
@@ -185,7 +189,17 @@ public class GramataDAO {
         return withConnection(connection -> new GramataDAO(connection).findById(id));
     }
 
-    public Gramata saveBook(Gramata form, int editingId, boolean createAvailableCopy, Lietotajs actor) throws SQLException {
+    /**
+     * Saglabā grāmatu (jaunu vai rediģētu).
+     *
+     * Parametrs {@code available} tagad tiek piemērots ABOS gadījumos:
+     * <ul>
+     *   <li>Jauna grāmata: ieraksta {@code pieejamiba} kolonnā un, ja {@code available == true},
+     *       izveido arī sākotnējo eksemplāru ar statusu {@code 'pieejams'}.</li>
+     *   <li>Rediģēšana: atjaunina {@code pieejamiba} kolonnu atbilstoši checkbox stāvoklim.</li>
+     * </ul>
+     */
+    public Gramata saveBook(Gramata form, int editingId, boolean available, Lietotajs actor) throws SQLException {
         requireStaff(actor);
         if (form == null) throw new IllegalArgumentException("Nav saņemti grāmatas dati.");
         requireText(form.getNosaukums(), "Grāmatas nosaukums ir obligāts.");
@@ -193,7 +207,6 @@ public class GramataDAO {
         if (form.getAutors() != null && form.getAutors().trim().length() > 100) throw new IllegalArgumentException("Autora nosaukums nedrīkst pārsniegt 100 rakstzīmes.");
         if (form.getKategorija() != null && form.getKategorija().trim().length() > 50) throw new IllegalArgumentException("Kategorija nedrīkst pārsniegt 50 rakstzīmes.");
         if (form.getIsbn() != null && form.getIsbn().trim().length() > 20) throw new IllegalArgumentException("ISBN nedrīkst pārsniegt 20 rakstzīmes.");
-        int currentYear = LocalDate.now().getYear();
         if (form.getIzdosanasGads() != null && (form.getIzdosanasGads() < 1800 || form.getIzdosanasGads() > 2100)) {
             throw new IllegalArgumentException("Izdošanas gadam jābūt starp 1800 un 2100.");
         }
@@ -203,6 +216,10 @@ public class GramataDAO {
         form.setIsbn(clean(form.getIsbn()));
         form.setKategorija(clean(form.getKategorija()));
         form.setApraksts(clean(form.getApraksts()));
+
+        // Pārnes UI checkbox vērtību uz modeļa lauku, ko izmanto bind().
+        form.setPieejamiba(available);
+
         return withConnection(connection -> {
             connection.setAutoCommit(false);
             try {
@@ -213,7 +230,7 @@ public class GramataDAO {
                     saved = form;
                     saved.setGramatasId(0);
                     books.insert(saved);
-                    if (createAvailableCopy) {
+                    if (available) {
                         Eksemplars copy = new Eksemplars();
                         copy.setGramata(saved);
                         copy.setBiblioteka(DEFAULT_LIBRARY);
@@ -229,8 +246,9 @@ public class GramataDAO {
                     saved.setKategorija(clean(form.getKategorija()));
                     saved.setApraksts(clean(form.getApraksts()));
                     saved.setIzdosanasGads(form.getIzdosanasGads());
+                    // Checkbox stāvoklis tagad tiek saglabāts arī rediģēšanas režīmā.
+                    saved.setPieejamiba(form.isPieejama());
                     if (!books.update(saved)) throw new SQLException("Grāmatas dati netika saglabāti.");
-                    // Rediģēšanas forma nevar mākslīgi pārrakstīt eksemplāra statusu.
                 }
                 connection.commit();
                 Gramata refreshed = books.findById(saved.getGramatasId());
