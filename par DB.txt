@@ -1,4 +1,4 @@
-Datu bāze ir Embedded, tāpēc tā automatiski neparadīsies Services un pēc .gitignore tas mapes ir tukša pirms projekta palaišanas, bet lai to atvērtu:
+Datu bāze ir Embedded, tāpēc tā automatiski neparadīsies Services, bet lai to atvērtu:
 Services > Databases > New Connection > Driver - New Driver > izvēlieties derby.jar no projekta mapes > Database : ceļš līdz 3.-Bibliotekas-informacijas-sistema-main\lib_db un talāk ka parasti; loginu un paroli parasti nevajag, bet ja atslēdzaties un vajag atpakaļ pieslēgties, abi ir pass123
 
 4 pamata lietotāji ar dažadu funkcionālu:
