@@ -32,8 +32,8 @@ public class QuickGuiFlowTest {
     }
     @After public void cleanup() throws Exception {edt(()->{if(dialogs!=null)dialogs.stop();for(Window w:Window.getWindows())w.dispose();return null;});}
     @Test(timeout=30000) public void selectEditSaveAndValidation() throws Exception {
-        visible("LoginDialog"); text("UsernameTextField","admin");text("PasswordTextField","wrong");click("LoginButton");visible("LoginDialog");assertEquals(1,errors);
-        text("PasswordTextField","admin123");click("LoginButton");visible("MainFrame");
+        visible("LoginDialog"); text("UsernameTextField","administrators");text("PasswordTextField","wrong");click("LoginButton");visible("LoginDialog");assertEquals(1,errors);
+        text("PasswordTextField","Test123!");click("LoginButton");visible("MainFrame");
         edt(()->{assertNotNull(app.getJMenuBar());assertEquals("",((JTextField)field(app,"UsernameTextField")).getText());assertEquals(0,((JPasswordField)field(app,"PasswordTextField")).getPassword().length);assertEquals(app,SwingUtilities.getWindowAncestor((Component)field(app,"BookListButton")));return null;});
         Lietotajs admin=(Lietotajs)field(app,"currentUser");GramataDAO books=new GramataDAO();
         Gramata form=new Gramata();form.setNosaukums("QA unknown year");Gramata saved=books.saveBook(form,-1,false,admin);

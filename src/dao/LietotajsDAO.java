@@ -157,7 +157,7 @@ public class LietotajsDAO {
     }
 
     private static final String LEGACY_HASH = "$2a$12$S/4iFvK26WWpHziepOKIFe94sUJ1SOmNnnegW0jz/MDXobmpJHmke";
-    private static final String ADMIN_HASH = "$2a$12$MvTNcSrTUIANNWjhVRdkke7aL.6jpHRdzhTMG3CnQnRt/uq8wACkq";
+    private static final String ADMIN_HASH = LEGACY_HASH;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     @FunctionalInterface
@@ -200,11 +200,25 @@ public class LietotajsDAO {
     private static void seedInitialData(Connection c) throws SQLException {
         if (!c.getAutoCommit()) throw new SQLException("Sākotnējo datu ievietošanai vajadzīgs autoCommit=true");
 
+        // Vienreizēja atjaunināšana jau esošai datubāzei: veco noklusēto admin kontu
+        // pārdēvējam un atiestatām tā paroli. Ja konts jau pārdēvēts, paroli neaiztiekam.
+        migrateDefaultAdministrator(c);
+
         LietotajsDAO users = new LietotajsDAO(c);
-        ensureUser(c, users, "Anna", "Ozola", "admin", ADMIN_HASH, "admin@example.com", Loma.ADMIN);
-        ensureUser(c, users, "Ilze", "Kalnina", "bibliotekars", LEGACY_HASH, "library@example.com", Loma.LIBRARIAN);
-        ensureUser(c, users, "Janis", "Berzins", "lasitajs", LEGACY_HASH, "reader@example.com", Loma.READER);
-        ensureUser(c, users, "Mara", "Liepa", "autors", LEGACY_HASH, "author@example.com", Loma.AUTHOR);
+        ensureUser(c, users, "Administrators", "Sistēmas", "administrators", ADMIN_HASH,
+                "admin@libinfo.lv", Loma.ADMIN);
+        ensureUser(c, users, "Ilze", "Kalnina", "bibliotekars", LEGACY_HASH, "bib@libinfo.lv", Loma.LIBRARIAN);
+        ensureUser(c, users, "Janis", "Berzins", "lasitajs", LEGACY_HASH, "lasitajs@libinfo.lv", Loma.READER);
+        ensureUser(c, users, "Mara", "Liepa", "autors", LEGACY_HASH, "autors@libinfo.lv", Loma.AUTHOR);
+
+        // Papildu demonstrācijas konti. Tos pārbauda pēc lietotājvārda, nevis lomas,
+        // lai datubāzē varētu būt vairāki lasītāji un bibliotekāri.
+        ensureAdditionalUser(c, users, "Elīna", "Liepa", "lasitajs2", LEGACY_HASH,
+                "lasitajs2@libinfo.lv", Loma.READER);
+        ensureAdditionalUser(c, users, "Pēteris", "Ozols", "lasitajs3", LEGACY_HASH,
+                "lasitajs3@libinfo.lv", Loma.READER);
+        ensureAdditionalUser(c, users, "Marta", "Ozola", "bibliotekars2", LEGACY_HASH,
+                "bibliotekars2@libinfo.lv", Loma.LIBRARIAN);
 
         GramataDAO books = new GramataDAO(c);
         EksemplarsDAO copies = new EksemplarsDAO(c);
@@ -229,6 +243,52 @@ public class LietotajsDAO {
             loans.ensureInitialLoan(readerId, copy2, Timestamp.valueOf(demoIssued), Timestamp.valueOf(demoDue));
             reservations.ensureInitialReservation(readerId, book1,
                     Timestamp.valueOf(LocalDateTime.now().minusMinutes(10).withNano(0)), "akt\u012bva");
+        }
+    }
+
+    /** Atjaunina veco noklusēto administratora kontu, bet nepārraksta jau jauno kontu. */
+    private static void migrateDefaultAdministrator(Connection c) throws SQLException {
+        boolean newAccountExists;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT 1 FROM lietotajs WHERE LOWER(lietotajvards) = LOWER(?)")) {
+            ps.setString(1, "administrators");
+            try (ResultSet rs = ps.executeQuery()) { newAccountExists = rs.next(); }
+        }
+        if (newAccountExists) return;
+
+        Integer legacyAdminId = null;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT lietotaja_id FROM lietotajs WHERE LOWER(lietotajvards) = LOWER(?) AND loma = 'ADMIN'")) {
+            ps.setString(1, "admin");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) legacyAdminId = rs.getInt(1);
+            }
+        }
+        if (legacyAdminId == null) return;
+
+        try (PreparedStatement ps = c.prepareStatement(
+                "UPDATE lietotajs SET lietotajvards = ?, parole = ? WHERE lietotaja_id = ?")) {
+            ps.setString(1, "administrators");
+            ps.setString(2, PasswordUtil.hash("Test123!"));
+            ps.setInt(3, legacyAdminId);
+            ps.executeUpdate();
+        }
+    }
+
+    /** Papildu demonstrācijas lietotāju ievieto tikai tad, ja lietotājvārds vēl nepastāv. */
+    private static void ensureAdditionalUser(Connection c, LietotajsDAO users, String firstName, String lastName,
+                                             String username, String passwordHash, String email, Loma role)
+            throws SQLException {
+        if (users.findByUsername(username) != null) return;
+        try (PreparedStatement ps = c.prepareStatement(
+                "INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES (?, ?, ?, ?, ?, ?)")) {
+            ps.setString(1, firstName);
+            ps.setString(2, lastName);
+            ps.setString(3, username);
+            ps.setString(4, passwordHash);
+            ps.setString(5, email);
+            ps.setString(6, role.name());
+            ps.executeUpdate();
         }
     }
 

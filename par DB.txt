@@ -1,8 +1,17 @@
-Datu bāze ir Embedded, tāpēc tā automatiski neparadīsies Services, bet lai to atvērtu:
-Services > Databases > New Connection > Driver - New Driver > izvēlieties derby.jar no projekta mapes > Database : ceļš līdz 3.-Bibliotekas-informacijas-sistema-main\lib_db un talāk ka parasti; loginu un paroli parasti nevajag, bet ja atslēdzaties un vajag atpakaļ pieslēgties, abi ir pass123
+Datu baze ir Embedded Derby, tapec ta automatiski neparadisies NetBeans Services saraksta.
+Lai to atvertu:
+Services > Databases > New Connection > Driver - New Driver > izvelieties derby.jar no projekta mapes.
+Database lauka noradiet cela uz projekta mapi 3.-Bibliotekas-informacijas-sistema-main\lib_db un turpiniet ka parasti.
+Ja NetBeans savienojumam tiek prasits DB lietotajvards/parole, izmantojiet pass123. Tas nav lietotnes pieteiksanas konts.
 
-4 pamata lietotāji ar dažadu funkcionālu:
-Administrators	admin	admin123
-Bibliotekārs	bibliotekars	Test123!
-Lasītājs	lasitajs	Test123!
-Autors	autors	Test123!
+Lietotnes pamatkonti (lietotajvards / parole):
+Administrators   administrators / Test123!
+Bibliotekars      bibliotekars / Test123!
+Lasitajs          lasitajs / Test123!
+Autors            autors / Test123!
+Papildu lasitajs  lasitajs2 / Test123!
+Papildu lasitajs  lasitajs3 / Test123!
+Papildu bibliotekars bibliotekars2 / Test123!
+
+Visiem demo kontiem sakuma parole ir Test123!. Paroles datubaze glaba BCrypt jaucējvertiba, nevis atklata teksta.
+Jau esosas projekta datubazes noklusejuma konts admin tiks parveidots par administrators ar paroli Test123! pirmaja lietotnes palaishanas reize.

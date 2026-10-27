@@ -123,7 +123,10 @@ UPDATE gramata SET pieejamiba = CASE WHEN EXISTS (
     WHERE e.gramatas_id = o.gramatas_id AND e.status = 'pieejams'
 ) THEN TRUE ELSE FALSE END WHERE gramatas_id = o.gramatas_id;
 
-INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Administrators', 'Sistēmas', 'admin', 'admin123', 'admin@libinfo.lv', 'ADMIN');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Administrators', 'Sistēmas', 'administrators', 'Test123!', 'admin@libinfo.lv', 'ADMIN');
 INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Bibliotekārs', 'Darbinieks', 'bibliotekars', 'Test123!', 'bib@libinfo.lv', 'LIBRARIAN');
 INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Lasītājs', 'Lietotājs', 'lasitajs', 'Test123!', 'lasitajs@libinfo.lv', 'READER');
 INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Autors', 'Rakstnieks', 'autors', 'Test123!', 'autors@libinfo.lv', 'AUTHOR');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Elīna', 'Liepa', 'lasitajs2', 'Test123!', 'lasitajs2@libinfo.lv', 'READER');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Pēteris', 'Ozols', 'lasitajs3', 'Test123!', 'lasitajs3@libinfo.lv', 'READER');
+INSERT INTO lietotajs (vards, uzvards, lietotajvards, parole, epasts, loma) VALUES ('Marta', 'Ozola', 'bibliotekars2', 'Test123!', 'bibliotekars2@libinfo.lv', 'LIBRARIAN');

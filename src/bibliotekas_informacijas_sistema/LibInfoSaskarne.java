@@ -3102,7 +3102,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         java.awt.EventQueue.invokeLater(() -> new LibInfoSaskarne());
     }
 
-    // Variables declaration - do not modify
+    // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel MainFrameStatusLabel;
     private javax.swing.JLabel BookListDialogStatusLabel;
     private javax.swing.JLabel UserSearchLabel;
@@ -3263,4 +3263,5 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private javax.swing.JMenuItem menuReturnItem;
     private javax.swing.JMenuItem menuSearchBookItem;
     private javax.swing.JMenuItem menuUsersItem;
+    // End of variables declaration//GEN-END:variables
 }

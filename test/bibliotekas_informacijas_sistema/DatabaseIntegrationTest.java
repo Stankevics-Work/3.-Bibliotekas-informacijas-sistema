@@ -88,10 +88,13 @@ public class DatabaseIntegrationTest {
     @Test public void legacyPlaintextPasswordsAreMigratedToBcrypt() throws Exception {
         LietotajsDAO users = new LietotajsDAO(connection);
         String[][] credentials = {
-            {"admin", "admin123"},
+            {"administrators", "Test123!"},
             {"bibliotekars", "Test123!"},
             {"lasitajs", "Test123!"},
-            {"autors", "Test123!"}
+            {"autors", "Test123!"},
+            {"lasitajs2", "Test123!"},
+            {"lasitajs3", "Test123!"},
+            {"bibliotekars2", "Test123!"}
         };
         for (String[] credential : credentials) {
             Lietotajs user = users.findByUsername(credential[0]);
@@ -107,20 +110,20 @@ public class DatabaseIntegrationTest {
         // Simulē vecu datubāzi, kuras lietotāja parole joprojām ir atklātā tekstā.
         try (PreparedStatement ps = connection.prepareStatement(
                 "UPDATE lietotajs SET parole = ? WHERE lietotajvards = ?")) {
-            ps.setString(1, "admin123");
-            ps.setString(2, "admin");
+            ps.setString(1, "Test123!");
+            ps.setString(2, "administrators");
             assertEquals(1, ps.executeUpdate());
         }
 
-        Lietotajs authenticated = new LietotajsDAO().authenticate("ADMIN", "admin123");
+        Lietotajs authenticated = new LietotajsDAO().authenticate("ADMINISTRATORS", "Test123!");
         assertNotNull(authenticated);
-        assertEquals("admin", authenticated.getLietotajvards());
+        assertEquals("administrators", authenticated.getLietotajvards());
         assertNull("Sesijas objektā paroli nedrīkst atstāt", authenticated.getParole());
 
-        Lietotajs saved = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs saved = new LietotajsDAO(connection).findByUsername("administrators");
         assertTrue("Pēc pieteikšanās vecajai parolei jābūt pārveidotai par BCrypt",
                 PasswordUtil.isBcryptHash(saved.getParole()));
-        assertTrue(PasswordUtil.verify("admin123", saved.getParole()));
+        assertTrue(PasswordUtil.verify("Test123!", saved.getParole()));
     }
 
     @Test public void initializationAndPersistence() throws Exception {
@@ -141,7 +144,7 @@ public class DatabaseIntegrationTest {
     @Test public void startupKeepsChangedAdminPasswordAndSeedDataStable() throws Exception {
         LietotajsDAO users = new LietotajsDAO();
         users.initializeDatabase();
-        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("administrators");
         assertNotNull("Sākotnējā administratora kontam jābūt izveidotam", admin);
 
         String changedPassword = "AdminChanged123!";
@@ -150,27 +153,27 @@ public class DatabaseIntegrationTest {
 
         // Atkārtota inicializācija nedrīkst atiestatīt paroli vai dublēt demonstrācijas datus.
         users.initializeDatabase();
-        Lietotajs saved = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs saved = new LietotajsDAO(connection).findByUsername("administrators");
         assertTrue("Administratora nomainītajai parolei jāsaglabājas", PasswordUtil.verify(changedPassword, saved.getParole()));
         assertEquals("Inicializācijai nevajadzētu dublēt sākotnējos izsniegumus", 1, new IzsniegumsDAO(connection).findAll().size());
         assertEquals("Inicializācijai nevajadzētu dublēt sākotnējās rezervācijas", 1, new RezervacijaDAO(connection).findAll().size());
 
-        Lietotajs authenticated = users.authenticate("admin", changedPassword);
+        Lietotajs authenticated = users.authenticate("administrators", changedPassword);
         assertNull("Autentificētās sesijas objektā nav jāglabā paroles jaucējvērtība", authenticated.getParole());
     }
 
     @Test public void startupDoesNotRecreateRenamedSeedAccounts() throws Exception {
         LietotajsDAO users = new LietotajsDAO();
         users.initializeDatabase();
-        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("administrators");
         assertNotNull(admin);
-        admin.setLietotajvards("mainitais_admin");
+        admin.setLietotajvards("mainitais_administrators");
         assertTrue(new LietotajsDAO(connection).update(admin));
 
         users.initializeDatabase();
         assertNull("Pārdēvēto kontu nedrīkst aizvietot ar noklusēto administratoru",
-                new LietotajsDAO(connection).findByUsername("admin"));
-        Lietotajs renamed = new LietotajsDAO(connection).findByUsername("mainitais_admin");
+                new LietotajsDAO(connection).findByUsername("administrators"));
+        Lietotajs renamed = new LietotajsDAO(connection).findByUsername("mainitais_administrators");
         assertNotNull(renamed);
         assertEquals(Loma.ADMIN, renamed.getLoma());
         try (PreparedStatement ps = connection.prepareStatement(
@@ -184,7 +187,7 @@ public class DatabaseIntegrationTest {
     @Test public void cannotRemoveOwnAdminRoleAndMalformedPasswordHashesFailClosed() throws Exception {
         LietotajsDAO users = new LietotajsDAO();
         users.initializeDatabase();
-        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("administrators");
         assertNotNull(admin);
         try {
             users.changeUserRole(admin.getLietotajaId(), Loma.READER, admin);
@@ -213,7 +216,7 @@ public class DatabaseIntegrationTest {
     @Test public void librarianCannotOverwriteAdministratorThroughEditForm() throws Exception {
         LietotajsDAO users = new LietotajsDAO();
         users.initializeDatabase();
-        Lietotajs admin = new LietotajsDAO(connection).findByUsername("admin");
+        Lietotajs admin = new LietotajsDAO(connection).findByUsername("administrators");
         String originalHash = admin.getParole();
         String originalName = admin.getVards();
         admin.setVards("Changed");
