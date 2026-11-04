@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import util.LogUtil;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import javax.swing.JDialog;
@@ -80,11 +81,12 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(getMessageParent(), message,
                 "LibInfo", JOptionPane.INFORMATION_MESSAGE);
     }
-
+    
     private void showError(Throwable ex) {
-        String message = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-        JOptionPane.showMessageDialog(getMessageParent(), message,
-                "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
+    LogUtil.error("Lietotāja saskarnes kļūda", ex); // <--- PIEVIENO ŠO
+    String message = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+    JOptionPane.showMessageDialog(getMessageParent(), message,
+            "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
     }
 
     private boolean isStaff() { return currentUser != null && (currentUser.getLoma() == Loma.ADMIN || currentUser.getLoma() == Loma.LIBRARIAN); }
@@ -3089,6 +3091,11 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     }
 
     public static void main(String args[]) {
+        util.LogUtil.init();
+        Thread.setDefaultUncaughtExceptionHandler((t, ex) -> 
+            util.LogUtil.error("Neapstrādāts izņēmums pavedienā " + t.getName(), ex)
+        );
+
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -3097,8 +3104,9 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(LibInfoSaskarne.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            util.LogUtil.error("Neizdevās iestatīt Nimbus LookAndFeel", ex);
         }
+        
         java.awt.EventQueue.invokeLater(() -> new LibInfoSaskarne());
     }
 

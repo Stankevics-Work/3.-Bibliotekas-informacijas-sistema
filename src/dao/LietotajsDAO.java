@@ -361,8 +361,8 @@ public class LietotajsDAO {
             }
 
             if (!passwordMatches) {
-                throw new SecurityException("Nepareizs lietotājvārds vai parole.");
-            }
+                util.LogUtil.warning("Neveiksmīgs pieteikums: lietotājvārds='" + normalizedUsername + "'");
+                throw new SecurityException("Nepareizs lietotājvārds vai parole.");            }
             user.setParole(null);
             return user;
         });
