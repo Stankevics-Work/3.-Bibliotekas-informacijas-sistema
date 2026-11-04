@@ -127,7 +127,9 @@ gradle-app.setting
 *.seed
 
 # ------------------------------------------------------------
-#  PRIVILEĢĒTĀ ATĻAUJA: Piespiedu kārtā iekļauj VISU lib_db mapi
+#  PRIVILEĢĒTĀ ATĻAUJA: Piespiedu kārtā iekļauj VISU lib_db un logs mapi
 # ------------------------------------------------------------
 !/lib_db/
 !/lib_db/**
+!/logs/
+!/logs/**
