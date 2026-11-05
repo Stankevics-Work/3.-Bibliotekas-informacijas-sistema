@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuite errors="0" failures="0" hostname="STR-16-311-17" name="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" skipped="0" tests="12" time="143.439" timestamp="2026-11-05T07:57:27">
+<testsuite errors="0" failures="0" hostname="STR-16-311-17" name="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" skipped="0" tests="12" time="140.096" timestamp="2026-11-05T08:09:29">
   <properties>
     <property name="javac.test.classpath" value="lib/derby.jar:lib/jbcrypt.jar:build/classes:lib/junit.jar:lib/hamcrest.jar" />
     <property name="java.specification.version" value="21" />
@@ -15,7 +15,7 @@
     <property name="libs.jsp-compilation.src" value="" />
     <property name="libs.JWSAntTasks.javadoc" value="" />
     <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk-21\bin" />
-    <property name="sun.java.command" value="org.apache.tools.ant.taskdefs.optional.junit.JUnitTestRunner bibliotekas_informacijas_sistema.DatabaseIntegrationTest skipNonTests=false filtertrace=true haltOnError=false haltOnFailure=false showoutput=true outputtoformatters=true logfailedtests=true threadid=0 logtestlistenerevents=true formatter=org.apache.tools.ant.taskdefs.optional.junit.BriefJUnitResultFormatter formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\test\results\TEST-bibliotekas_informacijas_sistema.DatabaseIntegrationTest.xml crashfile=D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\junitvmwatcher4480021460775902185.properties propsfile=D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\junit6077047609974837690.properties" />
+    <property name="sun.java.command" value="org.apache.tools.ant.taskdefs.optional.junit.JUnitTestRunner bibliotekas_informacijas_sistema.DatabaseIntegrationTest skipNonTests=false filtertrace=true haltOnError=false haltOnFailure=false showoutput=true outputtoformatters=true logfailedtests=true threadid=0 logtestlistenerevents=true formatter=org.apache.tools.ant.taskdefs.optional.junit.BriefJUnitResultFormatter formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\test\results\TEST-bibliotekas_informacijas_sistema.DatabaseIntegrationTest.xml crashfile=D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\junitvmwatcher10630258587613338317.properties propsfile=D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\junit13447575609866430004.properties" />
     <property name="jdk.debug" value="release" />
     <property name="javadoc.use" value="true" />
     <property name="javadoc.notree" value="false" />
@@ -60,6 +60,7 @@
     <property name="jlink.additionalparam" value="" />
     <property name="libs.testng.maven-pom" value="" />
     <property name="org.openide.version" value="deprecated" />
+    <property name="test.includes" value="bibliotekas_informacijas_sistema/DatabaseIntegrationTest.java" />
     <property name="libs.JAVADB_DRIVER_LABEL.src" value="" />
     <property name="run.classpath" value="lib/derby.jar:lib/jbcrypt.jar:build/classes" />
     <property name="libs.jaxb.src" value="" />
@@ -208,6 +209,7 @@
     <property name="libs.jsp-compilation.classpath" value="C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\servlet4.0-jsp2.3-api.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\glassfish-jspparser-5.1.0.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jsf-2_2\javax.faces.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jstl-api.jar;C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant-launcher.jar" />
     <property name="org.apache.commons.logging.Log" value="org.apache.commons.logging.impl.Jdk14Logger" />
     <property name="libs.javaee-api-6.0.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\javaee-api-6.0.jar" />
+    <property name="javac.includesfile.binary" value="D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\null1431762029" />
     <property name="libs.javaee-api-7.0.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\javaee-api-7.0.jar" />
     <property name="sun.cpu.isalist" value="amd64" />
     <property name="libs.restapi.maven-pom" value="" />
@@ -323,6 +325,7 @@
     <property name="empty.dir" value="D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\empty" />
     <property name="libs.jakartaee-api-10.0.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jakarta.jakartaee-api-10.0.0.jar" />
     <property name="netbeans.user" value="D:\Users\Ilja.Anisimovs\AppData\Roaming\NetBeans\25" />
+    <property name="javac.includes.binary" value="D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\test\classes\bibliotekas_informacijas_sistema\DatabaseIntegrationTest.class" />
     <property name="file.separator" value="\" />
     <property name="line.separator" value="&#xd;&#xa;" />
     <property name="javadoc.additionalparam" value="" />
@@ -337,7 +340,7 @@
     <property name="javadoc.windowtitle" value="" />
     <property name="nb.junit.single" value="false" />
     <property name="ant.file.type.3.-Bibliotekas-informacijas-sistema" value="file" />
-    <property name="nb.internal.action.name" value="test" />
+    <property name="nb.internal.action.name" value="test.single" />
     <property name="libs.javaee-api-8.0.maven-pom" value="" />
     <property name="libs.jaxws21.src" value="" />
     <property name="libs.jakartaee-web-api-9.0.javadoc" value="C:\Program Files\NetBeans-25\netbeans\enterprise\docs\jakartaee9-doc-api.jar" />
@@ -360,6 +363,7 @@
     <property name="libs.spring-framework500.src" value="" />
     <property name="user.properties.file" value="D:\Users\Ilja.Anisimovs\AppData\Roaming\NetBeans\25\build.properties" />
     <property name="libs.javaee-api-6.0.src" value="" />
+    <property name="javac.includes" value="bibliotekas_informacijas_sistema/DatabaseIntegrationTest.java" />
     <property name="netbeans.autoupdate.country" value="US" />
     <property name="java.class.path" value="D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\lib\derby.jar;D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\lib\jbcrypt.jar;D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\classes;D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\lib\junit.jar;D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\lib\hamcrest.jar;D:\Users\Ilja.Anisimovs\Documents\3.-Bibliotekas-informacijas-sistema-main\build\test\classes;C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant-launcher.jar;C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant.jar;C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant-junit.jar;C:\Program Files\NetBeans-25\netbeans\extide\ant\lib\ant-junit4.jar" />
     <property name="libs.javaee-web-api-6.0.maven-pom" value="" />
@@ -401,7 +405,7 @@
     <property name="libs.JAVADB_DRIVER_LABEL.maven-pom" value="" />
     <property name="libs.jakartaee-web-api-10.0.maven-pom" value="" />
     <property name="build.test.classes.dir" value="build/test/classes" />
-    <property name="ant.project.invoked-targets" value="test" />
+    <property name="ant.project.invoked-targets" value="test-single" />
     <property name="libs.jstl.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jstl-impl.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jstl-api.jar" />
     <property name="ap.cmd.line.internal" value="" />
     <property name="libs.PostgreSQLDriver.src" value="" />
@@ -419,6 +423,7 @@
     <property name="libs.metro.javadoc" value="C:\Program Files\NetBeans-25\netbeans\enterprise\docs\webservices-api-javadoc.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\docs\webservices-extra-javadoc.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\docs\webservices-extra-api-javadoc.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\docs\webservices-rt-javadoc.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\docs\webservices-tools-javadoc.jar" />
     <property name="libs.jakartaee-web-api-9.0.src" value="" />
     <property name="libs.jakartaee-web-api-10.0.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\jakarta.jakartaee-web-api-10.0.0.jar" />
+    <property name="test.class" value="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" />
     <property name="sun.awt.datatransfer.timeout" value="1000" />
     <property name="annotation.processing.run.all.processors" value="true" />
     <property name="libs.jakartaee-api-8.0.src" value="" />
@@ -427,18 +432,18 @@
     <property name="libs.jsp-compiler.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\ant\extra\jspcompile.jar" />
     <property name="libs.javaee-endorsed-api-6.0.classpath" value="C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\javaee6-endorsed\javax.annotation.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\javaee6-endorsed\jaxb-api-osgi.jar;C:\Program Files\NetBeans-25\netbeans\enterprise\modules\ext\javaee6-endorsed\webservices-api-osgi.jar" />
   </properties>
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="startupKeepsChangedAdminPasswordAndSeedDataStable" time="13.364" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="crudAndLoanLifecycle" time="11.923" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="booksWithoutIsbnCanBeSavedAndUpdatedIndependently" time="11.952" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="overdueAndConstraints" time="11.304" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="reservationsAndQueue" time="12.15" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="legacyPlaintextPasswordsAreMigratedToBcrypt" time="12.443" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="cannotRemoveOwnAdminRoleAndMalformedPasswordHashesFailClosed" time="11.502" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="startupDoesNotRecreateRenamedSeedAccounts" time="10.741" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="loginUpgradesLegacyPlaintextPasswordEvenIfStartupMigrationWasSkipped" time="11.302" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="initializationAndPersistence" time="11.083" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="librarianCannotOverwriteAdministratorThroughEditForm" time="12.428" />
-  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="existingFiveDaosDriveCompleteWorkflow" time="13.065" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="startupKeepsChangedAdminPasswordAndSeedDataStable" time="12.895" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="crudAndLoanLifecycle" time="12.33" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="booksWithoutIsbnCanBeSavedAndUpdatedIndependently" time="10.873" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="overdueAndConstraints" time="11.414" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="reservationsAndQueue" time="11.947" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="legacyPlaintextPasswordsAreMigratedToBcrypt" time="12.398" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="cannotRemoveOwnAdminRoleAndMalformedPasswordHashesFailClosed" time="11.391" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="startupDoesNotRecreateRenamedSeedAccounts" time="11.013" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="loginUpgradesLegacyPlaintextPasswordEvenIfStartupMigrationWasSkipped" time="11.406" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="initializationAndPersistence" time="11.037" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="librarianCannotOverwriteAdministratorThroughEditForm" time="11.432" />
+  <testcase classname="bibliotekas_informacijas_sistema.DatabaseIntegrationTest" name="existingFiveDaosDriveCompleteWorkflow" time="11.859" />
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
