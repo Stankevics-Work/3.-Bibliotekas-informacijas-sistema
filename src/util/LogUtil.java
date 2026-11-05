@@ -1,6 +1,8 @@
 package util;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,13 +24,29 @@ public final class LogUtil {
             Path dir = Paths.get("logs");
             Files.createDirectories(dir);
             // 5 MB liels fails, saglabā 3 vecākās versijas, raksta papildus (true)
-            FileHandler fh = new FileHandler(dir.resolve("libinfo.log").toString(), 5_000_000, 3, true); 
+            FileHandler fh = new FileHandler(dir.resolve("libinfo.log").toString(), 5_000_000, 3, true);
             fh.setLevel(Level.INFO);
             fh.setFormatter(new Formatter() {
                 @Override public String format(LogRecord r) {
-                    return String.format("%s [%s] %s: %s%n",
-                        LocalDateTime.now().format(FMT), r.getLevel(),
-                        r.getLoggerName(), formatMessage(r));
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append(String.format("%s [%s] %s: %s%n",
+                        LocalDateTime.now().format(FMT),
+                        r.getLevel(),
+                        r.getLoggerName(),
+                        formatMessage(r)));
+
+                    if (r.getThrown() != null) {
+                        StringWriter sw = new StringWriter();
+                        PrintWriter pw = new PrintWriter(sw);
+
+                        r.getThrown().printStackTrace(pw);
+                        pw.flush();
+
+                        sb.append(sw.toString());
+                    }
+
+                    return sb.toString();
                 }
             });
             LOGGER.addHandler(fh);

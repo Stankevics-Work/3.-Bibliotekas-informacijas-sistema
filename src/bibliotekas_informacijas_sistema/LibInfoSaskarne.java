@@ -82,12 +82,32 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
                 "LibInfo", JOptionPane.INFORMATION_MESSAGE);
     }
     
-    private void showError(Throwable ex) {
-    LogUtil.error("Lietotāja saskarnes kļūda", ex); // <--- PIEVIENO ŠO
-    String message = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-    JOptionPane.showMessageDialog(getMessageParent(), message,
-            "LibInfo kļūda", JOptionPane.ERROR_MESSAGE);
+private void showError(Throwable ex) {
+    String message = ex.getMessage() == null
+            ? ex.toString() : ex.getMessage();
+
+    if (ex instanceof IllegalArgumentException
+            || ex instanceof SecurityException) {
+
+        LogUtil.warning("Lietotāja ievades vai piekļuves kļūda: "
+                + message);
+
+        JOptionPane.showMessageDialog(
+                getMessageParent(),
+                message,
+                "Brīdinājums",
+                JOptionPane.WARNING_MESSAGE);
+
+    } else {
+        LogUtil.error("Lietotāja saskarnes kļūda", ex);
+
+        JOptionPane.showMessageDialog(
+                getMessageParent(),
+                "Radās sistēmas kļūda. Skatiet kļūdu žurnālu.",
+                "Sistēmas kļūda",
+                JOptionPane.ERROR_MESSAGE);
     }
+}
 
     private boolean isStaff() { return currentUser != null && (currentUser.getLoma() == Loma.ADMIN || currentUser.getLoma() == Loma.LIBRARIAN); }
     private boolean isAdmin() { return currentUser != null && currentUser.getLoma() == Loma.ADMIN; }
@@ -2590,9 +2610,16 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
             UsernameTextField.setText("");
             PasswordTextField.setText("");
             showMain();
-        } catch (Exception ex) {
-            showError(ex);
-        }
+        } catch (SecurityException | IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(
+                    getMessageParent(),
+                    ex.getMessage(),
+                    "Pieteikšanās neizdevās",
+                    JOptionPane.WARNING_MESSAGE
+            );
+} catch (Exception ex) {
+    showError(ex);
+}
     }
 
     private void UsernameTextFieldActionPerformed(java.awt.event.ActionEvent evt) {
