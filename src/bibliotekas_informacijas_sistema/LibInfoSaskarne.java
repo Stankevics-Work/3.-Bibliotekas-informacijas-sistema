@@ -44,6 +44,7 @@ public class LibInfoSaskarne extends javax.swing.JFrame {
     private final List<Lietotajs> loanReaders = new ArrayList<>();
     private final List<Eksemplars> loanCopies = new ArrayList<>();
     private final List<Gramata> reservationBooks = new ArrayList<>();
+    private final javax.swing.JMenuItem logoutMenuItem = new javax.swing.JMenuItem("Izlogoties");
     private boolean filterComboInitialized = false;
     private boolean suppressFilterAction = false;
 
@@ -87,14 +88,17 @@ private void showError(Throwable ex) {
             ? ex.toString() : ex.getMessage();
 
     if (ex instanceof IllegalArgumentException
-            || ex instanceof SecurityException) {
+            || ex instanceof SecurityException
+            || ex instanceof java.sql.SQLException) {
 
         LogUtil.warning("Lietotāja ievades vai piekļuves kļūda: "
                 + message);
 
         JOptionPane.showMessageDialog(
                 getMessageParent(),
-                message,
+                (ex instanceof java.sql.SQLException && message.length() > 180)
+                        ? "Darbību nevar pabeigt. Pārbaudiet ievadītos datus un saistītos ierakstus."
+                        : message,
                 "Brīdinājums",
                 JOptionPane.WARNING_MESSAGE);
 
@@ -121,7 +125,8 @@ private void showError(Throwable ex) {
         BookAddButton.setEnabled(staff);
         BookListButton.setEnabled(true);
         BookReturnButton.setEnabled(staff);
-        BookLoanButton.setEnabled(staff);
+        BookLoanButton.setEnabled(staff || reader);
+        BookLoanButton.setText(reader ? "Manas grāmatas" : "Izsniegt grāmatu");
         UserListButton.setEnabled(staff);
         ReservationButton.setEnabled(staff || reader);
         ReservationMenu.setEnabled(staff || reader);
@@ -253,6 +258,9 @@ private void showError(Throwable ex) {
         UserTable.getModel().addTableModelListener(e -> UserListFrameDialogStatusLabel.setText("Kopā: " + UserTable.getRowCount() + " lietotāji"));
         ReservationTable.getModel().addTableModelListener(e -> ReservationDialogStatusLabel.setText("Kopā: " + ReservationTable.getRowCount() + " rezervācijas"));
         NotificationTable.getModel().addTableModelListener(e -> NotificationDialogStatusLabel.setText("Kopā: " + NotificationTable.getRowCount() + " paziņojumi"));
+        logoutMenuItem.addActionListener(e -> logout());
+        FileMenu.insert(logoutMenuItem, 0);
+        FileMenu.insertSeparator(1);
         for (JDialog dialog : allDialogs()) dialog.pack();
         try {
             lietotajsDAO.initializeDatabase();
@@ -265,6 +273,20 @@ private void showError(Throwable ex) {
         EMailTextField.setText(""); PasswordProveTextField.setText("");
         UsernameTextField.setText("");
         PasswordTextField.setText("");
+        showDialog(LoginDialog);
+        UsernameTextField.requestFocusInWindow();
+    }
+
+    private void logout() {
+        if (currentUser == null) return;
+        currentUser = null;
+        readNotificationKeys.clear();
+        loanReaders.clear(); loanCopies.clear(); reservationBooks.clear();
+        editingBookId = -1; editingUserId = -1;
+        for (JDialog dialog : allDialogs()) clearDialogFields(dialog);
+        PasswordTextField.setText("");
+        UsernameTextField.setText("");
+        updateMainRoleAccess();
         showDialog(LoginDialog);
         UsernameTextField.requestFocusInWindow();
     }
@@ -1397,15 +1419,7 @@ private void showError(Throwable ex) {
             if (!isStaff()) { showError(new SecurityException("Kavētos izsniegumus drīkst skatīt tikai darbinieks.")); return; }
             showDialog(ReturnDialog);
             try {
-                List<Izsniegums> loans = izsniegumsDAO.findLoans(true, currentUser);
-                DefaultTableModel model = (DefaultTableModel) ReturnTable.getModel();
-                model.setRowCount(0);
-                for (Izsniegums loan : loans) {
-                    model.addRow(new Object[]{loan.getIzsniegumaId(), loan.getLietotajs(),
-                        loan.getEksemplars() == null || loan.getEksemplars().getGramata() == null ? "" : loan.getEksemplars().getGramata().getNosaukums(),
-                        loan.getIzsniegts(), loan.getTermins()});
-                }
-                ReturnLabel.setText("Kavētie izsniegumi");
+                displayLoanList(izsniegumsDAO.findLoans(true, currentUser), "Kavētie izsniegumi", true);
             } catch (Exception ex) { showError(ex); }
         });
         menuReservationsItem.addActionListener(e -> ReservationButtonActionPerformed(e));
@@ -2688,6 +2702,7 @@ private void showError(Throwable ex) {
         BookDescriptionTextArea.setText(""); BookAvailabilityCheckBox.setSelected(true);
         originalBookYear = null; bookYearEdited = false;
         BookAvailabilityCheckBox.setEnabled(true);
+        BookAvailabilityCheckBox.setToolTipText("Atzīmējiet, ja tiks pievienots vismaz viens eksemplārs.");
         BookEditDialog.setTitle("LibInfo - Pievienot grāmatu");
         showDialog(BookEditDialog);
     }
@@ -2733,7 +2748,8 @@ private void showError(Throwable ex) {
             BookAvailabilityCheckBox.setSelected(book.isPieejama());
             originalBookYear = book.getIzdosanasGads();
             bookYearEdited = false;
-            BookAvailabilityCheckBox.setEnabled(true);
+            BookAvailabilityCheckBox.setEnabled(false);
+            BookAvailabilityCheckBox.setToolTipText("Pieejamība tiek aprēķināta pēc eksemplāru statusa.");
             BookEditDialog.setTitle("LibInfo - Rediģēt grāmatu");
             showDialog(BookEditDialog);
         } catch (Exception ex) { showError(ex); }
@@ -2754,7 +2770,16 @@ private void showError(Throwable ex) {
             if (yearValue instanceof Number && (editingBookId < 0 || originalBookYear != null || yearWasEdited)) {
                 book.setIzdosanasGads(((Number) yearValue).intValue());
             }
-            gramataDAO.saveBook(book, editingBookId, BookAvailabilityCheckBox.isSelected(), currentUser);
+            int copies = 0;
+            if (editingBookId < 0 && BookAvailabilityCheckBox.isSelected()) {
+                javax.swing.JSpinner count = new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
+                int choice = JOptionPane.showConfirmDialog(BookEditDialog, count,
+                        "Cik eksemplārus pievienot? (1–100)", JOptionPane.OK_CANCEL_OPTION);
+                if (choice != JOptionPane.OK_OPTION) return;
+                count.commitEdit();
+                copies = ((Number) count.getValue()).intValue();
+            }
+            gramataDAO.saveBook(book, editingBookId, BookAvailabilityCheckBox.isSelected(), copies, currentUser);
             JOptionPane.showMessageDialog(BookEditDialog, "Grāmatas dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             BookEditDialog.setVisible(false);
             clearDialogFields(BookEditDialog);
@@ -2941,6 +2966,13 @@ private void showError(Throwable ex) {
     }
 
     private void BookLoanButtonActionPerformed(java.awt.event.ActionEvent evt) {
+        if (isReader()) {
+            showDialog(ReturnDialog);
+            try {
+                displayLoanList(izsniegumsDAO.findMyLoans(currentUser), "Mani aktīvie izsniegumi", false);
+            } catch (Exception ex) { showError(ex); }
+            return;
+        }
         if (!isStaff()) { showError(new SecurityException("Izsniegšanu drīkst reģistrēt bibliotekārs vai administrators.")); return; }
         showDialog(LoanDialog);
         try {
@@ -2988,19 +3020,25 @@ private void showError(Throwable ex) {
         } catch (Exception ex) { showError(ex); }
     }
 
+    /** Kopīgs GUI saraksta attēlojums, datus vienmēr piegādā DAO. */
+    private void displayLoanList(List<Izsniegums> loans, String caption, boolean allowReturn) {
+        DefaultTableModel model = (DefaultTableModel) ReturnTable.getModel();
+        model.setRowCount(0);
+        for (Izsniegums loan : loans) {
+            model.addRow(new Object[]{loan.getIzsniegumaId(), loan.getLietotajs(),
+                    loan.getEksemplars() == null || loan.getEksemplars().getGramata() == null
+                            ? "" : loan.getEksemplars().getGramata().getNosaukums(),
+                    loan.getIzsniegts(), loan.getTermins()});
+        }
+        ReturnLabel.setText(caption);
+        ReturnButton.setVisible(allowReturn);
+    }
+
     private void BookReturnButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (!isStaff()) { showError(new SecurityException("Grāmatu atgriešanu drīkst veikt darbinieks.")); return; }
         showDialog(ReturnDialog);
         try {
-            List<Izsniegums> loans = izsniegumsDAO.findLoans(false, currentUser);
-            DefaultTableModel model = (DefaultTableModel) ReturnTable.getModel();
-            model.setRowCount(0);
-            for (Izsniegums loan : loans) {
-                model.addRow(new Object[]{loan.getIzsniegumaId(), loan.getLietotajs(),
-                        loan.getEksemplars() == null || loan.getEksemplars().getGramata() == null ? "" : loan.getEksemplars().getGramata().getNosaukums(),
-                        loan.getIzsniegts(), loan.getTermins()});
-            }
-            ReturnLabel.setText("Aktīvie izsniegumi");
+            displayLoanList(izsniegumsDAO.findLoans(false, currentUser), "Aktīvie izsniegumi", true);
         } catch (Exception ex) { showError(ex); }
     }
 
@@ -3070,8 +3108,26 @@ private void showError(Throwable ex) {
         int modelRow = ReservationTable.convertRowIndexToModel(row);
         int id = ((Number) ReservationTable.getModel().getValueAt(modelRow, 0)).intValue();
         try {
-            rezervacijaDAO.completeReservation(id, currentUser);
-            showInfo("Rezervācija veiksmīgi izpildīta.");
+            Rezervacija reservation = rezervacijaDAO.findReservations(currentUser).stream()
+                    .filter(r -> r.getRezervacijasId() == id).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Rezervācija nav atrasta."));
+            List<Eksemplars> available = eksemplarsDAO.findAvailableCopies(currentUser).stream()
+                    .filter(copy -> copy.getGramata() != null && reservation.getGramata() != null
+                            && copy.getGramata().getGramatasId() == reservation.getGramata().getGramatasId())
+                    .toList();
+            if (available.isEmpty()) throw new IllegalArgumentException("Nav pieejamu šīs grāmatas eksemplāru.");
+            String[] options = available.stream()
+                    .map(copy -> "Eksemplārs ID " + copy.getEksemplaraId()).toArray(String[]::new);
+            Object selected = JOptionPane.showInputDialog(ReservationDialog, "Izvēlieties izsniedzamo eksemplāru:",
+                    "Izpildīt rezervāciju", JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+            if (selected == null) return;
+            int index = java.util.Arrays.asList(options).indexOf(selected);
+            if (index < 0) return;
+            String dueDate = JOptionPane.showInputDialog(ReservationDialog,
+                    "Atgriešanas termiņš (GGGG-MM-DD):", LocalDate.now().plusDays(14).toString());
+            if (dueDate == null) return;
+            rezervacijaDAO.fulfillReservation(id, available.get(index).getEksemplaraId(), dueDate, currentUser);
+            showInfo("Grāmata izsniegta, rezervācija izpildīta.");
             ReservationButtonActionPerformed(evt);
         } catch (Exception ex) { showError(ex); }
     }
@@ -3095,7 +3151,7 @@ private void showError(Throwable ex) {
                 String key = "reservation:" + reservation.getRezervacijasId();
                 String title = reservation.getGramata() == null ? "Grāmata" : reservation.getGramata().getNosaukums();
                 model.addRow(new Object[]{100000 + reservation.getRezervacijasId(), "Rezervācija",
-                        "Aktīva rezervācija: " + title, reservation.getDatums(), readNotificationKeys.contains(key) ? "Jā" : "Nē"});
+                        "Grāmata pieejama saņemšanai: " + title, reservation.getDatums(), readNotificationKeys.contains(key) ? "Jā" : "Nē"});
             }
         } catch (Exception ex) { showError(ex); }
     }

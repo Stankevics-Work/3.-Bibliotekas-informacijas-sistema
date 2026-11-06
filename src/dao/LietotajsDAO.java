@@ -4,6 +4,8 @@ import model.Rezervacija;
 import model.Lietotajs;
 import model.Loma;
 import model.Izsniegums;
+import model.Gramata;
+import model.Eksemplars;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -229,6 +231,30 @@ public class LietotajsDAO {
                 "Stasti", null, "Mara Liepa", true);
         int book2 = books.ensureInitialBook("Java pamati", "Ievads programmesana.", 2025,
                 "Macibu literatura", null, "Peteris Ozols", false);
+        // Dažādi demonstrācijas ieraksti meklēšanas, filtru, vairāku eksemplāru
+        // un rezervāciju pārbaudei. Metodes ir idempotentas – atkārtota palaišana tos nedublē.
+        String[][] catalog = {
+            {"Datu struktūras un algoritmi", "2021", "Mācību literatūra", "A. Kalniņš", "2"},
+            {"Latvijas vēstures stāsti", "2019", "Vēsture", "I. Bērziņa", "1"},
+            {"SQL un datubāzu pamati", "2022", "Mācību literatūra", "M. Liepa", "2"},
+            {"Ceļojums apkārt pasaulei", "2017", "Ceļojumi", "P. Ozols", "1"},
+            {"Java Swing praktiski", "2023", "Programmēšana", "A. Stankevičs", "2"},
+            {"Dzejas izlase", "2018", "Dzeja", "E. Liepa", "1"},
+            {"Zinātnes atklājumi", "2020", "Zinātne", "K. Vītols", "1"},
+            {"Pasakas bērniem", "2015", "Bērnu literatūra", "J. Liepiņš", "2"}
+        };
+        for (String[] entry : catalog) {
+            int id = books.ensureInitialBook(entry[0], "Demonstrācijas grāmata testa scenārijiem.",
+                    Integer.valueOf(entry[1]), entry[2], null, entry[3], true);
+            copies.ensureInitialCopy(id, "DTTT bibliotēka", "pieejams");
+            while (copies.findByBook(id).size() < Integer.parseInt(entry[4])) {
+                Eksemplars extra = new Eksemplars();
+                Gramata parent = new Gramata(); parent.setGramatasId(id);
+                extra.setGramata(parent); extra.setBiblioteka("DTTT bibliotēka");
+                copies.insert(extra);
+            }
+        }
+
         Lietotajs demoReader = users.findByUsername("lasitajs");
         int copy1 = copies.ensureInitialCopy(book1, "DTTT biblioteka", "pieejams");
         // Ja DB jau ir cits lasītāja konts un sākotnējais demo konts nav vajadzīgs,
@@ -238,7 +264,8 @@ public class LietotajsDAO {
 
         if (demoReader != null) {
             int readerId = demoReader.getLietotajaId();
-            LocalDateTime demoIssued = LocalDateTime.now().minusDays(1).withNano(0);
+            // Jaunā demonstrācijas DB jau satur arī kavētu izsniegumu.
+            LocalDateTime demoIssued = LocalDateTime.now().minusDays(20).withNano(0);
             LocalDateTime demoDue = demoIssued.plusDays(14).withHour(23).withMinute(59).withSecond(59).withNano(0);
             loans.ensureInitialLoan(readerId, copy2, Timestamp.valueOf(demoIssued), Timestamp.valueOf(demoDue));
             reservations.ensureInitialReservation(readerId, book1,

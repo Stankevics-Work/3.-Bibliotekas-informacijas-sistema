@@ -189,18 +189,20 @@ public class GramataDAO {
         return withConnection(connection -> new GramataDAO(connection).findById(id));
     }
 
-    /**
-     * Saglabā grāmatu (jaunu vai rediģētu).
-     *
-     * Parametrs {@code available} tagad tiek piemērots ABOS gadījumos:
-     * <ul>
-     *   <li>Jauna grāmata: ieraksta {@code pieejamiba} kolonnā un, ja {@code available == true},
-     *       izveido arī sākotnējo eksemplāru ar statusu {@code 'pieejams'}.</li>
-     *   <li>Rediģēšana: atjaunina {@code pieejamiba} kolonnu atbilstoši checkbox stāvoklim.</li>
-     * </ul>
-     */
+    /** Grāmatas pieejamība atspoguļo reālo pieejamo eksemplāru skaitu. */
     public Gramata saveBook(Gramata form, int editingId, boolean available, Lietotajs actor) throws SQLException {
+        return saveBook(form, editingId, available, available && editingId < 0 ? 1 : 0, actor);
+    }
+
+    /** Vienā transakcijā pievieno grāmatu un norādīto eksemplāru skaitu (0..100). */
+    public Gramata saveBook(Gramata form, int editingId, boolean available, int copyCount,
+                           Lietotajs actor) throws SQLException {
         requireStaff(actor);
+        if (editingId < -1) throw new IllegalArgumentException("Nederīgs grāmatas ID.");
+        if (copyCount < 0 || copyCount > 100) throw new IllegalArgumentException("Eksemplāru skaitam jābūt no 0 līdz 100.");
+        if (editingId >= 0 && copyCount != 0) throw new IllegalArgumentException("Papildu eksemplārus pievieno tikai jaunai grāmatai.");
+        if (editingId < 0 && available != (copyCount > 0))
+            throw new IllegalArgumentException("Pieejamībai jāatbilst eksemplāru skaitam.");
         if (form == null) throw new IllegalArgumentException("Nav saņemti grāmatas dati.");
         requireText(form.getNosaukums(), "Grāmatas nosaukums ir obligāts.");
         if (form.getNosaukums().trim().length() > 200) throw new IllegalArgumentException("Grāmatas nosaukums nedrīkst pārsniegt 200 rakstzīmes.");
@@ -230,7 +232,7 @@ public class GramataDAO {
                     saved = form;
                     saved.setGramatasId(0);
                     books.insert(saved);
-                    if (available) {
+                    for (int i = 0; i < copyCount; i++) {
                         Eksemplars copy = new Eksemplars();
                         copy.setGramata(saved);
                         copy.setBiblioteka(DEFAULT_LIBRARY);
@@ -246,8 +248,7 @@ public class GramataDAO {
                     saved.setKategorija(clean(form.getKategorija()));
                     saved.setApraksts(clean(form.getApraksts()));
                     saved.setIzdosanasGads(form.getIzdosanasGads());
-                    // Checkbox stāvoklis tagad tiek saglabāts arī rediģēšanas režīmā.
-                    saved.setPieejamiba(form.isPieejama());
+                    // Pieejamība nemainās ar checkbox; statusu atjaunina DB trigeri.
                     if (!books.update(saved)) throw new SQLException("Grāmatas dati netika saglabāti.");
                 }
                 connection.commit();
@@ -264,18 +265,50 @@ public class GramataDAO {
 
     public boolean deleteBook(int id, Lietotajs actor) throws SQLException {
         requireStaff(actor);
-        return withConnection(connection -> new GramataDAO(connection).delete(id));
+        if (id <= 0) throw new IllegalArgumentException("Nederīgs grāmatas ID.");
+        return withConnection(c -> {
+            c.setAutoCommit(false);
+            try {
+                if (new GramataDAO(c).findById(id) == null) {
+                    c.rollback();
+                    return false;
+                }
+                // Dzēšam tikai neizmantotus eksemplārus; neizdzēšam izsniegumu vēsturi.
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT 1 FROM izsniegums i JOIN eksemplars e ON i.eksemplara_id=e.eksemplara_id "
+                        + "WHERE e.gramatas_id=? UNION SELECT 1 FROM rezervacija WHERE gramatas_id=?")) {
+                    ps.setInt(1, id); ps.setInt(2, id);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) throw new IllegalArgumentException(
+                                "Grāmatu nevar dzēst: tai ir izsniegumu vēsture vai rezervācijas.");
+                    }
+                }
+                try (PreparedStatement ps = c.prepareStatement(
+                        "DELETE FROM eksemplars WHERE gramatas_id=? AND status='pieejams'")) {
+                    ps.setInt(1, id); ps.executeUpdate();
+                }
+                boolean deleted = new GramataDAO(c).delete(id);
+                c.commit();
+                return deleted;
+            } catch (SQLException ex) {
+                c.rollback();
+                if ("23503".equals(ex.getSQLState()))
+                    throw new IllegalArgumentException("Grāmatu nevar dzēst: tai ir saistīti ieraksti.", ex);
+                throw ex;
+            } catch (RuntimeException ex) {
+                c.rollback(); throw ex;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        });
     }
 
-    /** Ļauj HTTP integrācijas testos izmantot kontrolētu lokālu serveri. */
-    protected URI metadataRequestUri(String isbn) {
-        return URI.create("https://www.googleapis.com/books/v1/volumes?q=isbn:"
-                + URLEncoder.encode(isbn.trim(), StandardCharsets.UTF_8));
-    }
     public Gramata fetchBookMetadataByIsbn(String isbn) throws IOException, InterruptedException {
         requireText(isbn, "Ievadiet ISBN.");
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
-        HttpRequest request = HttpRequest.newBuilder(metadataRequestUri(isbn)).timeout(Duration.ofSeconds(12)).GET().build();
+        String url = "https://www.googleapis.com/books/v1/volumes?q=isbn:"
+                + URLEncoder.encode(isbn.trim(), StandardCharsets.UTF_8);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(12)).GET().build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("Google Books atgrieza HTTP " + response.statusCode() + ".");

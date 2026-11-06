@@ -60,4 +60,22 @@ public class QuickGuiFlowTest {
         click("UserListButton");select("UserTable",reader.getLietotajaId());click("EditUserButton");
         edt(()->{Window d=(Window)field(app,"UserEditDialog");d.dispatchEvent(new WindowEvent(d,WindowEvent.WINDOW_CLOSING));assertEquals("",((JTextField)field(app,"UserNameTextField")).getText());return null;});visible("MainFrame");edt(()->{JFrame d=app;d.dispatchEvent(new WindowEvent(d,WindowEvent.WINDOW_CLOSING));return null;});visible("MainFrame");assertEquals(2,errors);
     }
+    @Test(timeout=45000) public void logoutLoginAgainAndReaderSeesOwnLoans() throws Exception {
+        visible("LoginDialog");
+        text("UsernameTextField", "administrators"); text("PasswordTextField", "Test123!");
+        click("LoginButton"); visible("MainFrame");
+        edt(() -> { ((JMenuItem)field(app,"logoutMenuItem")).doClick(); return null; });
+        visible("LoginDialog");
+        assertNull(field(app, "currentUser"));
+        text("UsernameTextField", "lasitajs"); text("PasswordTextField", "Test123!");
+        click("LoginButton"); visible("MainFrame");
+        edt(() -> { assertEquals("Manas grāmatas", ((JButton)field(app,"BookLoanButton")).getText()); return null; });
+        click("BookLoanButton"); visible("ReturnDialog");
+        edt(() -> {
+            JTable loans = (JTable)field(app,"ReturnTable");
+            assertTrue("Demonstrācijas lasītājam jāredz savs izsniegums", loans.getRowCount()>0);
+            assertFalse("Lasītājam nevar būt grāmatas atgriešanas tiesības", ((JButton)field(app,"ReturnButton")).isVisible());
+            return null;
+        });
+    }
 }

@@ -4,6 +4,7 @@ import model.Gramata;
 import model.Rezervacija;
 import model.Lietotajs;
 import model.Loma;
+import model.Eksemplars;
 import java.sql.*;
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -86,6 +87,18 @@ public class RezervacijaDAO {
             if (user == null || user.getLoma() != Loma.READER) throw new SQLException("Darbība atļauta tikai lasītājam");
 
             if (value.getGramata() == null) throw new SQLException("Nav norādīta grāmata");
+            int bookId = value.getGramata().getGramatasId();
+            if (new GramataDAO(connection).findById(bookId) == null)
+                throw new SQLException("Grāmata nav atrasta.");
+            try (PreparedStatement held = connection.prepareStatement(
+                    "SELECT 1 FROM izsniegums i JOIN eksemplars e ON e.eksemplara_id=i.eksemplara_id "
+                    + "WHERE i.lietotaja_id=? AND e.gramatas_id=? AND i.atgriezts IS NULL")) {
+                held.setInt(1, user.getLietotajaId()); held.setInt(2, bookId);
+                try (ResultSet rs = held.executeQuery()) {
+                    if (rs.next()) throw new IllegalArgumentException(
+                            "Grāmatu nevar rezervēt, kamēr tā jau ir izsniegta jums.");
+                }
+            }
             if (!query("SELECT * FROM rezervacija WHERE lietotaja_id = ? AND gramatas_id = ? AND "
                     + activeStatusPredicate(), user.getLietotajaId(),
                     value.getGramata().getGramatasId()).isEmpty())
@@ -126,15 +139,9 @@ public class RezervacijaDAO {
                 + " ORDER BY datums, rezervacijas_id", bookId);
     }
 
-    /** Atzīmē aktīvu rezervāciju kā izpildītu. */
+    /** Neļauj atzīmēt rezervāciju par izpildītu bez faktiska izsnieguma. */
     public boolean complete(int id) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement(
-                "UPDATE rezervacija SET statuss = ? WHERE rezervacijas_id = ? AND "
-                + activeStatusPredicate())) {
-            ps.setString(1, STATUS_COMPLETED);
-            ps.setInt(2, id);
-            return ps.executeUpdate() == 1;
-        }
+        throw new SQLException("Rezervācija jāizpilda kopā ar grāmatas izsniegšanu.");
     }
 
     /** Aktīvu rezervāciju var atcelt, izpildi reģistrē DAO metode complete */
@@ -195,6 +202,15 @@ public class RezervacijaDAO {
                     while (rs.next()) alreadyReserved.add(rs.getInt(1));
                 }
             }
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "SELECT DISTINCT e.gramatas_id FROM izsniegums i "
+                    + "JOIN eksemplars e ON e.eksemplara_id=i.eksemplara_id "
+                    + "WHERE i.lietotaja_id=? AND i.atgriezts IS NULL")) {
+                ps.setInt(1, actor.getLietotajaId());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) alreadyReserved.add(rs.getInt(1));
+                }
+            }
             books.removeIf(book -> alreadyReserved.contains(book.getGramatasId()));
             return books;
         });
@@ -233,11 +249,30 @@ public class RezervacijaDAO {
         });
     }
 
+    /** Rezervācija kļūst izpildīta tikai kopā ar reālu izsniegumu. */
     public void completeReservation(int reservationId, Lietotajs actor) throws SQLException {
         requireStaff(actor);
-        boolean completed = withConnection(connection ->
-                new RezervacijaDAO(connection).complete(reservationId));
-        if (!completed) throw new SQLException("Rezervāciju nevar izpildīt. Pārbaudiet, vai tā vēl ir aktīva.");
+        throw new IllegalArgumentException("Izpildiet rezervāciju, izvēloties eksemplāru un izsniegšanas termiņu.");
+    }
+
+    /** IzsniegumsDAO vienā transakcijā izsniedz eksemplāru un izpilda rindas pirmo rezervāciju. */
+    public void fulfillReservation(int reservationId, int copyId, String dueDate, Lietotajs actor)
+            throws SQLException {
+        requireStaff(actor);
+        Rezervacija reservation = withConnection(c -> new RezervacijaDAO(c).findById(reservationId));
+        if (reservation == null || !isActiveStatus(reservation.getStatuss()))
+            throw new IllegalArgumentException("Izvēlētā rezervācija vairs nav aktīva.");
+        Eksemplars copy = withConnection(c -> new EksemplarsDAO(c).findById(copyId));
+        if (copy == null || copy.getGramata() == null || reservation.getGramata() == null
+                || copy.getGramata().getGramatasId() != reservation.getGramata().getGramatasId())
+            throw new IllegalArgumentException("Eksemplārs nepieder rezervētajai grāmatai.");
+        if (!"pieejams".equals(copy.getStatus()))
+            throw new IllegalArgumentException("Izvēlētais eksemplārs nav pieejams.");
+        List<Rezervacija> queue = withConnection(c -> new RezervacijaDAO(c)
+                .findActiveByBook(reservation.getGramata().getGramatasId()));
+        if (queue.isEmpty() || queue.get(0).getRezervacijasId() != reservationId)
+            throw new IllegalArgumentException("Vispirms jāapkalpo agrākā aktīvā rezervācija.");
+        new IzsniegumsDAO().issueBook(reservation.getLietotajs().getLietotajaId(), copyId, dueDate, actor);
     }
 
     /** Paziņojumu sarakstā redzamās aktīvās rezervācijas atbilstoši lietotāja lomai. */
@@ -245,10 +280,23 @@ public class RezervacijaDAO {
         requireNotificationAccess(actor);
         return withConnection(c -> {
             List<Rezervacija> result = new RezervacijaDAO(c).findActive();
-            if (actor.getLoma() == Loma.READER) {
-                result.removeIf(v -> v.getLietotajs() == null
-                        || v.getLietotajs().getLietotajaId() != actor.getLietotajaId());
+            // Informējam tikai tad, kad lasītājs ir rindas sākumā un ir brīvs eksemplārs.
+            Set<Integer> ready = new HashSet<>();
+            for (Rezervacija r : result) {
+                if (r.getGramata() == null || r.getLietotajs() == null) continue;
+                int bookId = r.getGramata().getGramatasId();
+                if (ready.contains(bookId)) continue;
+                boolean available = new EksemplarsDAO(c).findByBook(bookId).stream()
+                        .anyMatch(e -> "pieejams".equals(e.getStatus()));
+                if (available) ready.add(bookId);
             }
+            Set<Integer> emittedBooks = new HashSet<>();
+            result.removeIf(r -> {
+                int bookId = r.getGramata() == null ? -1 : r.getGramata().getGramatasId();
+                if (!ready.contains(bookId) || !emittedBooks.add(bookId)) return true;
+                return actor.getLoma() == Loma.READER &&
+                        r.getLietotajs().getLietotajaId() != actor.getLietotajaId();
+            });
             return result;
         });
     }

@@ -133,6 +133,8 @@ public class IzsniegumsDAO {
                 throw new SQLException("Grāmatu gaida cits lasītājs");
 
             value.setIzsniegts(new java.util.Date());
+            if (!value.getTermins().after(value.getIzsniegts()))
+                throw new IllegalArgumentException("Atgriešanas termiņam jābūt pēc izsniegšanas laika.");
             value.setAtgriezts(null);
 
             int id;
@@ -240,12 +242,17 @@ public class IzsniegumsDAO {
     public void issueBook(int readerId, int copyId, String dueDateText, Lietotajs actor) throws SQLException {
         requireStaff(actor);
         final LocalDate dueDate;
+        if (dueDateText == null || dueDateText.isBlank())
+            throw new IllegalArgumentException("Ievadiet atgriešanas termiņu (GGGG-MM-DD).");
         try {
-            dueDate = LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            // ISO_LOCAL_DATE izmanto STRICT validāciju: 30. februāris nav derīgs.
+            dueDate = LocalDate.parse(dueDateText.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (DateTimeParseException ex) {
-            throw new IllegalArgumentException("Termiņam jābūt formātā GGGG-MM-DD.", ex);
+            throw new IllegalArgumentException("Termiņam jābūt derīgam datumam formātā GGGG-MM-DD.", ex);
         }
         if (dueDate.isBefore(LocalDate.now())) throw new IllegalArgumentException("Termiņš nevar būt pagātnē.");
+        if (dueDate.isAfter(LocalDate.now().plusYears(1)))
+            throw new IllegalArgumentException("Izsniegšanas termiņš nedrīkst pārsniegt vienu gadu.");
         withConnection(connection -> {
             Lietotajs reader = new LietotajsDAO(connection).findById(readerId);
             Eksemplars copy = new EksemplarsDAO(connection).findById(copyId);
@@ -265,6 +272,14 @@ public class IzsniegumsDAO {
         return withConnection(connection -> overdueOnly
                 ? new IzsniegumsDAO(connection).findOverdue()
                 : new IzsniegumsDAO(connection).findActive());
+    }
+
+    /** Lasītājs redz tikai savus aktīvos izsniegumus (nevis citu lietotāju datus). */
+    public List<Izsniegums> findMyLoans(Lietotajs actor) throws SQLException {
+        requireReader(actor);
+        return withConnection(c -> new IzsniegumsDAO(c).query(
+                BASE_SELECT + "WHERE i.lietotaja_id = ? AND i.atgriezts IS NULL ORDER BY i.termins",
+                actor.getLietotajaId()));
     }
 
     public void returnLoan(int loanId, Lietotajs actor) throws SQLException {
