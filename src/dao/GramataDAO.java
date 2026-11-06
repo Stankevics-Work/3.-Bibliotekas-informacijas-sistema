@@ -267,12 +267,15 @@ public class GramataDAO {
         return withConnection(connection -> new GramataDAO(connection).delete(id));
     }
 
+    /** Ļauj HTTP integrācijas testos izmantot kontrolētu lokālu serveri. */
+    protected URI metadataRequestUri(String isbn) {
+        return URI.create("https://www.googleapis.com/books/v1/volumes?q=isbn:"
+                + URLEncoder.encode(isbn.trim(), StandardCharsets.UTF_8));
+    }
     public Gramata fetchBookMetadataByIsbn(String isbn) throws IOException, InterruptedException {
         requireText(isbn, "Ievadiet ISBN.");
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
-        String url = "https://www.googleapis.com/books/v1/volumes?q=isbn:"
-                + URLEncoder.encode(isbn.trim(), StandardCharsets.UTF_8);
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(12)).GET().build();
+        HttpRequest request = HttpRequest.newBuilder(metadataRequestUri(isbn)).timeout(Duration.ofSeconds(12)).GET().build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("Google Books atgrieza HTTP " + response.statusCode() + ".");
