@@ -20,7 +20,7 @@ import java.util.Locale;
 import db.DatabaseManager;
 import static util.PasswordUtil.*;
 
-/** Gramata datu piekļuve ar parametrizētiem JDBC vaicājumiem */
+/** Gramata datu piekluve ar parametrizetiem JDBC vaicajumiem */
 public class GramataDAO {
     private final Connection connection;
 
@@ -61,7 +61,7 @@ public class GramataDAO {
         return query("SELECT * FROM gramata ORDER BY gramatas_id");
     }
 
-    /** Piesaista visus 7 laukus, ieskaitot pieejamiba. */
+    /** Piesaista visus 7 laukus, ieskaitot pieejamiba (lieto tikai INSERT). */
     private void bind(PreparedStatement ps, Gramata value) throws SQLException {
         ps.setString(1, value.getNosaukums());
         ps.setString(2, value.getApraksts());
@@ -85,11 +85,21 @@ public class GramataDAO {
         }
     }
 
+    /**
+     * Atjaunina grāmatas pamatdatus. Pieejamību (pieejamiba) apzināti neaiztiek —
+     * to uztur DB trigeri (pieejamiba_insert/update/delete) atkarībā no eksemplāru statusa.
+     */
     public boolean update(Gramata value) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(
                 "UPDATE gramata SET nosaukums = ?, apraksts = ?, izdosanas_gads = ?, isbn = ?, "
-                + "kategorija = ?, autors = ?, pieejamiba = ? WHERE gramatas_id = ?")) {
-            bind(ps, value); ps.setInt(8, value.getGramatasId());
+                + "kategorija = ?, autors = ? WHERE gramatas_id = ?")) {
+            ps.setString(1, value.getNosaukums());
+            ps.setString(2, value.getApraksts());
+            if (value.getIzdosanasGads() == null) ps.setNull(3, Types.INTEGER); else ps.setInt(3, value.getIzdosanasGads());
+            ps.setString(4, value.getIsbn());
+            ps.setString(5, value.getKategorija());
+            ps.setString(6, value.getAutors());
+            ps.setInt(7, value.getGramatasId());
             return ps.executeUpdate() == 1;
         }
     }
@@ -99,7 +109,6 @@ public class GramataDAO {
         return query("SELECT * FROM gramata WHERE LOWER(nosaukums) LIKE LOWER(?) OR LOWER(autors) LIKE LOWER(?) OR isbn LIKE ? ORDER BY nosaukums", pattern, pattern, pattern);
     }
 
-    /** Meklē grāmatas pēc teksta un saskarnē izvēlētā filtra. */
     public List<Gramata> search(String text, String filter) throws SQLException {
         StringBuilder sql = new StringBuilder("SELECT * FROM gramata WHERE 1=1");
         List<Object> args = new ArrayList<>();
@@ -139,7 +148,6 @@ public class GramataDAO {
         return categories;
     }
 
-    /** Null nozīmē, ka konkrētais filtrs nav jāpiemēro */
     public List<Gramata> filter(String kategorija, Integer gads, Boolean pieejamiba) throws SQLException {
         String sql = "SELECT * FROM gramata WHERE 1=1";
         List<Object> args = new ArrayList<>();
@@ -149,7 +157,6 @@ public class GramataDAO {
         return query(sql + " ORDER BY nosaukums", args.toArray());
     }
 
-    /** Dzēš ierakstu, ārējās atslēgas aizsargā saistītos datus */
     public boolean delete(int id) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement("DELETE FROM gramata WHERE gramatas_id = ?")) {
             ps.setInt(1, id); return ps.executeUpdate() == 1;
@@ -189,20 +196,35 @@ public class GramataDAO {
         return withConnection(connection -> new GramataDAO(connection).findById(id));
     }
 
-    /** Grāmatas pieejamība atspoguļo reālo pieejamo eksemplāru skaitu. */
+    /** Vienkāršotā versija — jauna grāmata ar 1 eksemplāru, ja atzīmēta pieejama. */
     public Gramata saveBook(Gramata form, int editingId, boolean available, Lietotajs actor) throws SQLException {
-        return saveBook(form, editingId, available, available && editingId < 0 ? 1 : 0, actor);
+        int copies = (editingId < 0 && available) ? 1 : 0;
+        return saveBook(form, editingId, available, copies, actor);
     }
 
-    /** Vienā transakcijā pievieno grāmatu un norādīto eksemplāru skaitu (0..100). */
+    /**
+     * Saglabā grāmatu vienā transakcijā.
+     *
+     * Jauna grāmata ({@code editingId < 0}):
+     *  - ja {@code available=true}, {@code copyCount} nosaka, cik eksemplārus izveidot (>=1);
+     *  - ja {@code available=false}, eksemplāri netiek veidoti.
+     *
+     * Rediģēšana ({@code editingId >= 0}):
+     *  - ja grāmata iepriekš nebija pieejama un tagad tiek atzīmēta kā pieejama —
+     *    pievieno {@code copyCount} eksemplārus (jābūt >=1);
+     *  - ja grāmata bija pieejama un tagad tiek atzīmēta kā nepieejama —
+     *    noņem visus pieejamos eksemplārus (izsniegtos/rezervētos neaiztiek);
+     *  - ja pieejamība nemainās — eksemplārus neaiztiek.
+     *
+     * Pieejamības karodziņu vienmēr galīgi nosaka DB trigeri pēc pēdējās
+     * {@code eksemplars} izmaiņas, tāpēc grāmatas atjaunināšana notiek PIRMS
+     * eksemplāru izmaiņām.
+     */
     public Gramata saveBook(Gramata form, int editingId, boolean available, int copyCount,
                            Lietotajs actor) throws SQLException {
         requireStaff(actor);
         if (editingId < -1) throw new IllegalArgumentException("Nederīgs grāmatas ID.");
         if (copyCount < 0 || copyCount > 100) throw new IllegalArgumentException("Eksemplāru skaitam jābūt no 0 līdz 100.");
-        if (editingId >= 0 && copyCount != 0) throw new IllegalArgumentException("Papildu eksemplārus pievieno tikai jaunai grāmatai.");
-        if (editingId < 0 && available != (copyCount > 0))
-            throw new IllegalArgumentException("Pieejamībai jāatbilst eksemplāru skaitam.");
         if (form == null) throw new IllegalArgumentException("Nav saņemti grāmatas dati.");
         requireText(form.getNosaukums(), "Grāmatas nosaukums ir obligāts.");
         if (form.getNosaukums().trim().length() > 200) throw new IllegalArgumentException("Grāmatas nosaukums nedrīkst pārsniegt 200 rakstzīmes.");
@@ -212,6 +234,7 @@ public class GramataDAO {
         if (form.getIzdosanasGads() != null && (form.getIzdosanasGads() < 1800 || form.getIzdosanasGads() > 2100)) {
             throw new IllegalArgumentException("Izdošanas gadam jābūt starp 1800 un 2100.");
         }
+
         // Tukšs neobligāts ISBN jāglabā kā NULL, citādi UNIQUE liedz saglabāt otru grāmatu bez ISBN.
         form.setNosaukums(form.getNosaukums().trim());
         form.setAutors(clean(form.getAutors()));
@@ -219,38 +242,56 @@ public class GramataDAO {
         form.setKategorija(clean(form.getKategorija()));
         form.setApraksts(clean(form.getApraksts()));
 
-        // Pārnes UI checkbox vērtību uz modeļa lauku, ko izmanto bind().
-        form.setPieejamiba(available);
-
         return withConnection(connection -> {
             connection.setAutoCommit(false);
             try {
                 GramataDAO books = new GramataDAO(connection);
                 EksemplarsDAO copies = new EksemplarsDAO(connection);
                 Gramata saved;
+
                 if (editingId < 0) {
+                    // ---------- JAUNA GRĀMATA ----------
+                    if (available && copyCount == 0)
+                        throw new IllegalArgumentException("Pieejamai grāmatai jābūt vismaz vienam eksemplāram.");
+                    if (!available && copyCount > 0)
+                        throw new IllegalArgumentException("Nepieejamai grāmatai nevar pievienot pieejamus eksemplārus.");
+
+                    form.setPieejamiba(available);
                     saved = form;
                     saved.setGramatasId(0);
                     books.insert(saved);
-                    for (int i = 0; i < copyCount; i++) {
-                        Eksemplars copy = new Eksemplars();
-                        copy.setGramata(saved);
-                        copy.setBiblioteka(DEFAULT_LIBRARY);
-                        copy.setStatus("pieejams");
-                        copies.insert(copy);
+                    if (copyCount > 0) {
+                        copies.addCopiesInTransaction(saved.getGramatasId(), copyCount);
                     }
                 } else {
+                    // ---------- REDIĢĒŠANA ----------
                     saved = books.findById(editingId);
                     if (saved == null) throw new SQLException("Grāmata nav atrasta.");
+                    boolean wasAvailable = saved.isPieejama();
+
                     saved.setNosaukums(form.getNosaukums().trim());
                     saved.setAutors(clean(form.getAutors()));
                     saved.setIsbn(clean(form.getIsbn()));
                     saved.setKategorija(clean(form.getKategorija()));
                     saved.setApraksts(clean(form.getApraksts()));
                     saved.setIzdosanasGads(form.getIzdosanasGads());
-                    // Pieejamība nemainās ar checkbox; statusu atjaunina DB trigeri.
-                    if (!books.update(saved)) throw new SQLException("Grāmatas dati netika saglabāti.");
+                    // pieejamiba šeit netiek mainīta — update() to neaiztiek.
+
+                    if (!books.update(saved))
+                        throw new SQLException("Grāmatas dati netika saglabāti.");
+
+                    // Eksemplāru izmaiņas PĒC grāmatas atjaunināšanas — trigeri pārrēķina pieejamiba.
+                    if (wasAvailable && !available) {
+                        copies.removeAvailableCopiesInTransaction(editingId);
+                    } else if (!wasAvailable && available) {
+                        if (copyCount == 0)
+                            throw new IllegalArgumentException(
+                                "Lai grāmata kļūtu pieejama, jāpievieno vismaz viens eksemplārs.");
+                        copies.addCopiesInTransaction(editingId, copyCount);
+                    }
+                    // Ja stāvoklis nemainīts — eksemplārus neaiztiek.
                 }
+
                 connection.commit();
                 Gramata refreshed = books.findById(saved.getGramatasId());
                 return refreshed == null ? saved : refreshed;
@@ -273,7 +314,6 @@ public class GramataDAO {
                     c.rollback();
                     return false;
                 }
-                // Dzēšam tikai neizmantotus eksemplārus; neizdzēšam izsniegumu vēsturi.
                 try (PreparedStatement ps = c.prepareStatement(
                         "SELECT 1 FROM izsniegums i JOIN eksemplars e ON i.eksemplara_id=e.eksemplara_id "
                         + "WHERE e.gramatas_id=? UNION SELECT 1 FROM rezervacija WHERE gramatas_id=?")) {

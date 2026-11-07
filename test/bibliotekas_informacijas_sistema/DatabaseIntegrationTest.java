@@ -1,7 +1,5 @@
 package bibliotekas_informacijas_sistema;
 
-
-
 import dao.IzsniegumsDAO;
 import dao.GramataDAO;
 import dao.EksemplarsDAO;
@@ -129,6 +127,7 @@ public class DatabaseIntegrationTest {
     @Test public void initializationAndPersistence() throws Exception {
         assertTrue(DatabaseManager.testConnection(connection));
         DatabaseManager.initialize(connection);
+        int before = new GramataDAO(connection).findAll().size();     // <-- izlabots
         Gramata value = book("Saglabata gramata");
         connection.close();
         // Pilna datubāzes apturēšana pārbauda saglabāšanu arī pēc dzinēja restartēšanas
@@ -137,7 +136,7 @@ public class DatabaseIntegrationTest {
         connection = DatabaseManager.getConnection();
         DatabaseManager.initialize(connection);
         assertEquals("Saglabata gramata", new GramataDAO(connection).findById(value.getGramatasId()).getNosaukums());
-        assertEquals(1, new GramataDAO(connection).findAll().size());
+        assertEquals(before + 1, new GramataDAO(connection).findAll().size());   // <-- izlabots
         assertNull(new GramataDAO(connection).findById(Integer.MAX_VALUE));
     }
 
@@ -147,6 +146,10 @@ public class DatabaseIntegrationTest {
         Lietotajs admin = new LietotajsDAO(connection).findByUsername("administrators");
         assertNotNull("Sākotnējā administratora kontam jābūt izveidotam", admin);
 
+        // Fiksējam stabilo stāvokli pēc pirmās inicializācijas
+        int loansBefore = new IzsniegumsDAO(connection).findAll().size();          // <-- izlabots
+        int reservationsBefore = new RezervacijaDAO(connection).findAll().size();  // <-- izlabots
+
         String changedPassword = "AdminChanged123!";
         admin.setParole(PasswordUtil.hash(changedPassword));
         assertTrue(new LietotajsDAO(connection).update(admin));
@@ -154,12 +157,16 @@ public class DatabaseIntegrationTest {
         // Atkārtota inicializācija nedrīkst atiestatīt paroli vai dublēt demonstrācijas datus.
         users.initializeDatabase();
         Lietotajs saved = new LietotajsDAO(connection).findByUsername("administrators");
-        assertTrue("Administratora nomainītajai parolei jāsaglabājas", PasswordUtil.verify(changedPassword, saved.getParole()));
-        assertEquals("Inicializācijai nevajadzētu dublēt sākotnējos izsniegumus", 1, new IzsniegumsDAO(connection).findAll().size());
-        assertEquals("Inicializācijai nevajadzētu dublēt sākotnējās rezervācijas", 1, new RezervacijaDAO(connection).findAll().size());
+        assertTrue("Administratora nomainītajai parolei jāsaglabājas",
+                PasswordUtil.verify(changedPassword, saved.getParole()));
+        assertEquals("Inicializācijai nevajadzētu dublēt izsniegumus",
+                loansBefore, new IzsniegumsDAO(connection).findAll().size());          // <-- izlabots
+        assertEquals("Inicializācijai nevajadzētu dublēt rezervācijas",
+                reservationsBefore, new RezervacijaDAO(connection).findAll().size());   // <-- izlabots
 
         Lietotajs authenticated = users.authenticate("administrators", changedPassword);
-        assertNull("Autentificētās sesijas objektā nav jāglabā paroles jaucējvērtība", authenticated.getParole());
+        assertNull("Autentificētās sesijas objektā nav jāglabā paroles jaucējvērtība",
+                authenticated.getParole());
     }
 
     @Test public void startupDoesNotRecreateRenamedSeedAccounts() throws Exception {
@@ -257,12 +264,12 @@ public class DatabaseIntegrationTest {
         assertTrue(PasswordUtil.verify("Test123!", users.findByUsername("lasitajs").getParole()));
         user.setVards("Peteris"); assertTrue(users.update(user));
         assertEquals("Peteris", users.findById(user.getLietotajaId()).getVards());
-        Gramata value = book("Java pamati");
+        Gramata value = book("CrudTestUnikāls");                        // <-- unikāls nosaukums
         GramataDAO books = new GramataDAO(connection);
         assertNull(books.findById(value.getGramatasId()).getIzdosanasGads());
         assertFalse(books.findById(value.getGramatasId()).isPieejama());
         value.setIzdosanasGads(2025); value.setApraksts("Macibu gramata"); assertTrue(books.update(value));
-        assertEquals(1, books.search("JAVA").size());
+        assertEquals(1, books.search("CrudTestUnikāls").size());        // <-- unikāls meklējums
         Eksemplars copy = copy(value);
         EksemplarsDAO copies = new EksemplarsDAO(connection);
         assertTrue(books.findById(value.getGramatasId()).isPieejama());
@@ -270,16 +277,19 @@ public class DatabaseIntegrationTest {
         assertEquals(1, copies.findByBook(value.getGramatasId()).size());
         copy.setBiblioteka("Centrala biblioteka"); assertTrue(copies.update(copy));
         assertEquals("Centrala biblioteka", copies.findById(copy.getEksemplaraId()).getBiblioteka());
-        Izsniegums issued = loan(user, copy);
         IzsniegumsDAO loans = new IzsniegumsDAO(connection);
-        assertEquals(1, loans.findActive().size());
+        int loansBefore = loans.findAll().size();                       // <-- fiksējam pirms
+        int activeBefore = loans.findActive().size();                   // <-- fiksējam pirms
+        Izsniegums issued = loan(user, copy);
+        assertEquals(activeBefore + 1, loans.findActive().size());      // <-- izlabots
         assertEquals(user.getLietotajaId(), loans.findById(issued.getIzsniegumaId()).getLietotajs().getLietotajaId());
         assertFalse(books.findById(value.getGramatasId()).isPieejama());
         assertEquals("izsniegts", copies.findById(copy.getEksemplaraId()).getStatus());
         assertFalse(copies.delete(copy.getEksemplaraId()));
         assertFalse(loans.delete(issued.getIzsniegumaId()));
         try { loan(user, copy); fail("Nedrīkst izsniegt divreiz"); } catch (SQLException expected) { }
-        assertEquals(1, loans.findAll().size()); assertTrue(connection.getAutoCommit());
+        assertEquals(loansBefore + 1, loans.findAll().size());          // <-- izlabots
+        assertTrue(connection.getAutoCommit());
         issued.setTermins(new Date(System.currentTimeMillis() + 172800000L)); assertTrue(loans.update(issued));
         assertTrue(loans.atgriezt(issued.getIzsniegumaId()));
         Date returned = loans.findById(issued.getIzsniegumaId()).getAtgriezts();
@@ -299,15 +309,16 @@ public class DatabaseIntegrationTest {
         RezervacijaDAO dao = new RezervacijaDAO(connection);
         Rezervacija r1 = new Rezervacija(); r1.setLietotajs(first); r1.setGramata(book); dao.insert(r1);
         Rezervacija r2 = new Rezervacija(); r2.setLietotajs(second); r2.setGramata(book); dao.insert(r2);
-        assertEquals(2, dao.findActive().size());
-        assertEquals(first.getLietotajaId(), dao.findActiveByBook(book.getGramatasId()).get(0).getLietotajs().getLietotajaId());
+        assertEquals(2, dao.findActiveByBook(book.getGramatasId()).size());   // <-- šaurāk
+        assertEquals(first.getLietotajaId(),
+                dao.findActiveByBook(book.getGramatasId()).get(0).getLietotajs().getLietotajaId());
         try { dao.insert(r1); fail("Atkārtota rezervācija nav atļauta"); } catch (SQLException expected) { }
         try { loan(second, copy); fail("Jāievēro rezervāciju rinda"); } catch (SQLException expected) { }
         assertTrue(new GramataDAO(connection).findById(book.getGramatasId()).isPieejama());
         loan(first, copy);
         assertEquals("izpildīta", dao.findById(r1.getRezervacijasId()).getStatuss());
         r2.setStatuss("atcelta"); assertTrue(dao.update(r2));
-        assertTrue(dao.findActive().isEmpty());
+        assertTrue(dao.findActiveByBook(book.getGramatasId()).isEmpty());     // <-- šaurāk
         assertTrue(dao.delete(r1.getRezervacijasId())); assertTrue(dao.delete(r2.getRezervacijasId()));
     }
 
@@ -410,6 +421,9 @@ public class DatabaseIntegrationTest {
     }
 
     @Test public void overdueAndConstraints() throws Exception {
+        IzsniegumsDAO loans = new IzsniegumsDAO(connection);
+        int overdueBefore = loans.findOverdue().size();                 // <-- fiksējam pirms
+
         Lietotajs user = reader("kavetajs");
         Gramata book = book("Kaveta gramata"); Eksemplars copy = copy(book);
         Izsniegums loan = loan(user, copy);
@@ -418,9 +432,10 @@ public class DatabaseIntegrationTest {
             ps.setTimestamp(2, new Timestamp(System.currentTimeMillis() - 86400000L));
             ps.setInt(3, loan.getIzsniegumaId()); ps.executeUpdate();
         }
-        IzsniegumsDAO loans = new IzsniegumsDAO(connection);
-        assertEquals(1, loans.findOverdue().size()); assertTrue(loans.findOverdue().get(0).isKavejies());
-        loans.atgriezt(loan.getIzsniegumaId()); assertTrue(loans.findOverdue().isEmpty());
+        assertEquals(overdueBefore + 1, loans.findOverdue().size());    // <-- izlabots
+        assertTrue(loans.findOverdue().stream().anyMatch(Izsniegums::isKavejies));
+        loans.atgriezt(loan.getIzsniegumaId());
+        assertEquals(overdueBefore, loans.findOverdue().size());        // <-- izlabots
         book.setIzdosanasGads(1700);
         try { new GramataDAO(connection).update(book); fail("Jāpārbauda izdošanas gads"); } catch (SQLException expected) { }
         assertNull(new GramataDAO(connection).findById(book.getGramatasId()).getIzdosanasGads());

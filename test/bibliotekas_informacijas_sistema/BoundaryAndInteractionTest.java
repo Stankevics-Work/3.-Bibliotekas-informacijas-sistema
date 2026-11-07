@@ -11,7 +11,6 @@ import org.junit.*;
 import static org.junit.Assert.*;
 import util.PasswordUtil;
 
-/** 77.–78. stundas tests: robežvērtības, nepareiza ievade un GUI->DAO->Derby datu integritāte. */
 public class BoundaryAndInteractionTest {
     private Connection c;
     private Path db;
@@ -62,6 +61,9 @@ public class BoundaryAndInteractionTest {
         IzsniegumsDAO loans = new IzsniegumsDAO();
         RezervacijaDAO reservations = new RezervacijaDAO();
 
+        // Sākumstāvoklis: 13 demonstrācijas grāmatas no schema.sql
+        final int initialCount = books.searchBooks("", "Visas grāmatas", staff).size();
+
         rejected(() -> { try { books.saveBook(form("A", 1799, null), -1, true, 1, staff); }
             catch (SQLException e) { throw new AssertionError(e); } });
         rejected(() -> { try { books.saveBook(form("A", 2101, null), -1, true, 1, staff); }
@@ -76,7 +78,8 @@ public class BoundaryAndInteractionTest {
             catch (SQLException e) { throw new AssertionError(e); } });
         rejected(() -> { try { books.saveBook(form("A", 1800, null), -1, true, 0, staff); }
             catch (SQLException e) { throw new AssertionError(e); } });
-        assertTrue("Kļūdainai ievadei nedrīkst radīt DB ierakstus", books.searchBooks("", "Visas grāmatas", staff).isEmpty());
+        assertEquals("Kļūdainai ievadei nedrīkst radīt DB ierakstus",
+                initialCount, books.searchBooks("", "Visas grāmatas", staff).size());   // <-- izlabots
 
         Gramata two = books.saveBook(form("Robežtestu grāmata", 1800, "ISBN-QA-123"), -1, true, 2, staff);
         assertEquals(2, copies.findByBook(two.getGramatasId()).size());
@@ -89,7 +92,7 @@ public class BoundaryAndInteractionTest {
         try { books.saveBook(form("Dublēts ISBN", 2000, "ISBN-QA-123"), -1, true, 2, staff);
               fail("Dublēta ISBN transakcija jāatceļ"); }
         catch (SQLException expected) { }
-        assertEquals(1, books.searchBooks("", "Visas grāmatas", staff).size());
+        assertEquals(initialCount + 1, books.searchBooks("", "Visas grāmatas", staff).size());   // <-- izlabots
         assertEquals(2, copies.findByBook(two.getGramatasId()).size());
         List<Eksemplars> copiesForBook = copies.findByBook(two.getGramatasId());
         int firstCopyId = copiesForBook.get(0).getEksemplaraId();
@@ -134,7 +137,12 @@ public class BoundaryAndInteractionTest {
         assertEquals("izpildīta", new RezervacijaDAO(c).findById(booked.getRezervacijasId()).getStatuss());
         assertEquals(1, loans.findMyLoans(r2).size());
         assertFalse(new GramataDAO(c).findById(two.getGramatasId()).isPieejama());
-        assertEquals(2, new IzsniegumsDAO(c).findActive().size());
+        // Rēķinām tikai mūsu grāmatas aktīvos izsniegumus (seed satur 1 aktīvo demo izsniegumu)
+        assertEquals(2, new IzsniegumsDAO(c).findActive().stream()
+                .filter(l -> l.getEksemplars() != null
+                        && l.getEksemplars().getGramata() != null
+                        && l.getEksemplars().getGramata().getGramatasId() == two.getGramatasId())
+                .count());
         assertTrue(reservations.findReservations(r1).isEmpty());
         assertEquals(1, reservations.findReservations(r2).size());
         loans.returnLoan(loans.findMyLoans(r1).get(0).getIzsniegumaId(), staff);

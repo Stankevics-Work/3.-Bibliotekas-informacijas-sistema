@@ -227,25 +227,27 @@ public class LietotajsDAO {
         IzsniegumsDAO loans = new IzsniegumsDAO(c);
         RezervacijaDAO reservations = new RezervacijaDAO(c);
 
-        int book1 = books.ensureInitialBook("Mazais celojums", "Stasts par celojumu.", 2024,
-                "Stasti", null, "Mara Liepa", true);
-        int book2 = books.ensureInitialBook("Java pamati", "Ievads programmesana.", 2025,
-                "Macibu literatura", null, "Peteris Ozols", false);
+        // Saskaņots ar schema.sql: ISBN pievienots, autori un nosaukumi precīzi.
+        int book1 = books.ensureInitialBook("Mazais ceļojums", "Stāsts par ceļojumu.", 2024,
+                "Stāsti", "70210001", "Artjoms Priede", true);
+        int book2 = books.ensureInitialBook("Java pamati", "Ievads programmēšanā.", 2025,
+                "Mācību literatūra", "70210002", "Arvīds Mežulis", false);
+
         // Dažādi demonstrācijas ieraksti meklēšanas, filtru, vairāku eksemplāru
         // un rezervāciju pārbaudei. Metodes ir idempotentas – atkārtota palaišana tos nedublē.
         String[][] catalog = {
-            {"Datu struktūras un algoritmi", "2021", "Mācību literatūra", "A. Kalniņš", "2"},
-            {"Latvijas vēstures stāsti", "2019", "Vēsture", "I. Bērziņa", "1"},
-            {"SQL un datubāzu pamati", "2022", "Mācību literatūra", "M. Liepa", "2"},
-            {"Ceļojums apkārt pasaulei", "2017", "Ceļojumi", "P. Ozols", "1"},
-            {"Java Swing praktiski", "2023", "Programmēšana", "A. Stankevičs", "2"},
-            {"Dzejas izlase", "2018", "Dzeja", "E. Liepa", "1"},
-            {"Zinātnes atklājumi", "2020", "Zinātne", "K. Vītols", "1"},
-            {"Pasakas bērniem", "2015", "Bērnu literatūra", "J. Liepiņš", "2"}
+            {"Datu struktūras un algoritmi", "2021", "Mācību literatūra", "Andris Kalniņš", "2", "70210303"},
+            {"Latvijas vēstures stāsti", "2019", "Vēsture", "Inese Bērziņa", "1", "70210204"},
+            {"SQL un datubāzu pamati", "2022", "Mācību literatūra", "Mārtiņš Liepa", "2", "70210304"},
+            {"Ceļojums apkārt pasaulei", "2017", "Ceļojumi", "Pēteris Ozols", "1", "70210206"},
+            {"Java Swing praktiski", "2023", "Programmēšana", "Andis Leščinskis", "2", "70210305"},
+            {"Dzejas izlase", "2018", "Dzeja", "Elīna Pekša", "1", "70210306"},
+            {"Zinātnes atklājumi", "2020", "Zinātne", "Konstantīns Vītols", "1", "70210109"},
+            {"Pasakas bērniem", "2015", "Bērnu literatūra", "Jānis Liepiņš", "2", "70210110"}
         };
         for (String[] entry : catalog) {
             int id = books.ensureInitialBook(entry[0], "Demonstrācijas grāmata testa scenārijiem.",
-                    Integer.valueOf(entry[1]), entry[2], null, entry[3], true);
+                    Integer.valueOf(entry[1]), entry[2], entry[5], entry[3], true);
             copies.ensureInitialCopy(id, "DTTT bibliotēka", "pieejams");
             while (copies.findByBook(id).size() < Integer.parseInt(entry[4])) {
                 Eksemplars extra = new Eksemplars();
@@ -256,10 +258,10 @@ public class LietotajsDAO {
         }
 
         Lietotajs demoReader = users.findByUsername("lasitajs");
-        int copy1 = copies.ensureInitialCopy(book1, "DTTT biblioteka", "pieejams");
+        int copy1 = copies.ensureInitialCopy(book1, "DTTT bibliotēka", "pieejams");
         // Ja DB jau ir cits lasītāja konts un sākotnējais demo konts nav vajadzīgs,
         // neveido eksemplāru ar "izsniegts" statusu bez atbilstoša izsnieguma.
-        int copy2 = copies.ensureInitialCopy(book2, "DTTT biblioteka",
+        int copy2 = copies.ensureInitialCopy(book2, "DTTT bibliotēka",
                 demoReader == null ? "pieejams" : "izsniegts");
 
         if (demoReader != null) {
@@ -389,7 +391,8 @@ public class LietotajsDAO {
 
             if (!passwordMatches) {
                 util.LogUtil.warning("Neveiksmīgs pieteikums: lietotājvārds='" + normalizedUsername + "'");
-                throw new SecurityException("Nepareizs lietotājvārds vai parole.");            }
+                throw new SecurityException("Nepareizs lietotājvārds vai parole.");
+            }
             user.setParole(null);
             return user;
         });

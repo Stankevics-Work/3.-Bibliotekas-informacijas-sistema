@@ -19,13 +19,10 @@ import static util.PasswordUtil.*;
 public class IzsniegumsDAO {
     private final Connection connection;
 
-    /** Ērtā konstrukcija lietotnes GUI slāņa izsaukumiem; katra darbība atver savu DB savienojumu. */
     public IzsniegumsDAO() { this.connection = null; }
 
-    /** Savienojumu aizver izsaucējs, vienu savienojumu neizmanto vairākos pavedienos */
     public IzsniegumsDAO(Connection connection) { this.connection = connection; }
 
-    /** Vienots SELECT ar JOIN — novērš N+1 vaicājumus. */
     private static final String BASE_SELECT =
             "SELECT i.*, "
             + "u.vards AS u_vards, u.uzvards AS u_uzvards, u.lietotajvards AS u_lietotajvards, "
@@ -118,7 +115,6 @@ public class IzsniegumsDAO {
             Eksemplars copy = new EksemplarsDAO(connection).findById(value.getEksemplars().getEksemplaraId());
             if (copy == null || !"pieejams".equals(copy.getStatus())) throw new SQLException("Eksemplārs nav pieejams");
 
-            // Pārbauda, vai eksemplārs jau nav izsniegts
             try (PreparedStatement check = connection.prepareStatement(
                     "SELECT 1 FROM izsniegums WHERE eksemplara_id = ? AND atgriezts IS NULL")) {
                 check.setInt(1, copy.getEksemplaraId());
@@ -155,6 +151,10 @@ public class IzsniegumsDAO {
                     ps.executeUpdate();
                 }
             }
+            
+            // Atjauninām pieejamību pēc tam, kad trigeris ir nomainījis eksemplāra statusu uz 'izsniegts'
+            new EksemplarsDAO(connection).refreshAvailability(copy.getGramata().getGramatasId());
+            
             connection.commit();
             value.setIzsniegumaId(id);
             return id;
@@ -175,7 +175,6 @@ public class IzsniegumsDAO {
         return query(BASE_SELECT + "WHERE i.atgriezts IS NULL AND i.termins < CURRENT_TIMESTAMP ORDER BY i.termins");
     }
 
-    /** Rediģē tikai termiņu, izsnieguma vēsturi un saites nepārraksta */
     public boolean update(Izsniegums value) throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(
                 "UPDATE izsniegums SET termins = ? WHERE izsnieguma_id = ? AND atgriezts IS NULL")) {
@@ -206,12 +205,25 @@ public class IzsniegumsDAO {
                 if (autoCommit) connection.commit();
                 return false;
             }
+            
+            int bookId = -1;
+            try (PreparedStatement getBook = connection.prepareStatement(
+                    "SELECT e.gramatas_id FROM izsniegums i JOIN eksemplars e ON i.eksemplara_id = e.eksemplara_id WHERE i.izsnieguma_id = ?")) {
+                getBook.setInt(1, id);
+                try (ResultSet rs = getBook.executeQuery()) { if (rs.next()) bookId = rs.getInt(1); }
+            }
+
             try (PreparedStatement ps = connection.prepareStatement(
                     "UPDATE eksemplars SET status = 'pieejams' WHERE eksemplara_id = "
                     + "(SELECT eksemplara_id FROM izsniegums WHERE izsnieguma_id = ?)")) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
+            
+            if (bookId != -1) {
+                new EksemplarsDAO(connection).refreshAvailability(bookId);
+            }
+            
             if (autoCommit) connection.commit();
             return true;
         } catch (SQLException ex) {
@@ -245,7 +257,6 @@ public class IzsniegumsDAO {
         if (dueDateText == null || dueDateText.isBlank())
             throw new IllegalArgumentException("Ievadiet atgriešanas termiņu (GGGG-MM-DD).");
         try {
-            // ISO_LOCAL_DATE izmanto STRICT validāciju: 30. februāris nav derīgs.
             dueDate = LocalDate.parse(dueDateText.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (DateTimeParseException ex) {
             throw new IllegalArgumentException("Termiņam jābūt derīgam datumam formātā GGGG-MM-DD.", ex);
@@ -274,7 +285,6 @@ public class IzsniegumsDAO {
                 : new IzsniegumsDAO(connection).findActive());
     }
 
-    /** Lasītājs redz tikai savus aktīvos izsniegumus (nevis citu lietotāju datus). */
     public List<Izsniegums> findMyLoans(Lietotajs actor) throws SQLException {
         requireReader(actor);
         return withConnection(c -> new IzsniegumsDAO(c).query(
@@ -288,7 +298,6 @@ public class IzsniegumsDAO {
         if (!returned) throw new SQLException("Izsniegumu neizdevās atgriezt. Iespējams, tas jau ir atgriezts.");
     }
 
-    /** Paziņojumu sarakstā redzamie kavētie izsniegumi atbilstoši lietotāja lomai. */
     public List<Izsniegums> findNotificationLoans(Lietotajs actor) throws SQLException {
         requireNotificationAccess(actor);
         return withConnection(c -> {
@@ -301,21 +310,20 @@ public class IzsniegumsDAO {
         });
     }
 
-    /** Idempotenti izveido demonstrācijas datus šīs DAO atbildības tabulā. */
-    void ensureInitialLoan(int userId, int copyId, Timestamp issued, Timestamp due) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement(
-                "SELECT 1 FROM izsniegums WHERE lietotaja_id = ? AND eksemplara_id = ?")) {
-            ps.setInt(1, userId);
-            ps.setInt(2, copyId);
-            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return; }
-        }
-        try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO izsniegums (lietotaja_id, eksemplara_id, izsniegts, termins, atgriezts) VALUES (?, ?, ?, ?, NULL)")) {
-            ps.setInt(1, userId);
-            ps.setInt(2, copyId);
-            ps.setTimestamp(3, issued);
-            ps.setTimestamp(4, due);
-            ps.executeUpdate();
-        }
+void ensureInitialLoan(int userId, int copyId, Timestamp issued, Timestamp due) throws SQLException {
+    try (PreparedStatement ps = connection.prepareStatement(
+            "SELECT 1 FROM izsniegums WHERE lietotaja_id = ? AND eksemplara_id = ? "
+            + "AND atgriezts IS NULL")) {          // <-- vienīgā izmaiņa
+        ps.setInt(1, userId);
+        ps.setInt(2, copyId);
+        try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return; }
     }
+    try (PreparedStatement ps = connection.prepareStatement(
+            "INSERT INTO izsniegums (lietotaja_id, eksemplara_id, izsniegts, termins, atgriezts) "
+            + "VALUES (?, ?, ?, ?, NULL)")) {
+        ps.setInt(1, userId); ps.setInt(2, copyId);
+        ps.setTimestamp(3, issued); ps.setTimestamp(4, due);
+        ps.executeUpdate();
+    }
+}
 }

@@ -9,8 +9,10 @@ import java.util.List;
 import db.DatabaseManager;
 import static util.PasswordUtil.*;
 
-/** Eksemplars datu piekļuve ar parametrizētiem JDBC vaicājumiem */
+/** Eksemplars datu piekluve ar parametrizetiem JDBC vaicajumiem */
 public class EksemplarsDAO {
+    private static final String DEFAULT_LIBRARY = "DTTT bibliotēka";
+
     private final Connection connection;
 
     /** Ērtā konstrukcija lietotnes GUI slāņa izsaukumiem; katra darbība atver savu DB savienojumu. */
@@ -81,9 +83,11 @@ public class EksemplarsDAO {
             bind(ps, value); ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (!keys.next()) throw new SQLException("Nav iegūts ieraksta ID");
-                value.setEksemplaraId(keys.getInt(1)); return value.getEksemplaraId();
+                value.setEksemplaraId(keys.getInt(1)); 
             }
         }
+        refreshAvailability(value.getGramata().getGramatasId());
+        return value.getEksemplaraId();
     }
 
     /** Rediģē tikai atrašanās vietu, grāmatas saite un aprites statuss paliek nemainīgi */
@@ -102,9 +106,35 @@ public class EksemplarsDAO {
 
     /** Dzēš ierakstu, ārējās atslēgas aizsargā saistītos datus */
     public boolean delete(int id) throws SQLException {
+        int bookId = -1;
+        try (PreparedStatement getBook = connection.prepareStatement("SELECT gramatas_id FROM eksemplars WHERE eksemplara_id = ?")) {
+            getBook.setInt(1, id);
+            try (ResultSet rs = getBook.executeQuery()) {
+                if (rs.next()) bookId = rs.getInt(1);
+            }
+        }
+        
         try (PreparedStatement ps = connection.prepareStatement(
                 "DELETE FROM eksemplars WHERE eksemplara_id = ? AND status = 'pieejams'")) {
-            ps.setInt(1, id); return ps.executeUpdate() == 1;
+            ps.setInt(1, id); 
+            boolean deleted = ps.executeUpdate() == 1;
+            if (deleted && bookId != -1) {
+                refreshAvailability(bookId);
+            }
+            return deleted;
+        }
+    }
+
+    /** Pārrēķina gramata.pieejamiba pēc eksemplāru statusiem. */
+    void refreshAvailability(int bookId) throws SQLException {
+        if (connection == null) return;
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE gramata SET pieejamiba = CASE WHEN EXISTS ("
+                + "SELECT 1 FROM eksemplars WHERE gramatas_id = ? AND status = 'pieejams'"
+                + ") THEN TRUE ELSE FALSE END WHERE gramatas_id = ?")) {
+            ps.setInt(1, bookId);
+            ps.setInt(2, bookId);
+            ps.executeUpdate();
         }
     }
 
@@ -122,6 +152,93 @@ public class EksemplarsDAO {
         return withConnection(connection -> new EksemplarsDAO(connection).query(
                 BASE_SELECT + "WHERE e.status = 'pieejams' AND e.gramatas_id IS NOT NULL "
                 + "AND g.gramatas_id IS NOT NULL ORDER BY e.eksemplara_id"));
+    }
+
+    // ============================================================
+    // Eksemplāru pievienošana / noņemšana
+    // ============================================================
+
+    /**
+     * Pievieno {@code count} jaunus pieejamus eksemplārus grāmatai.
+     * Atver savu savienojumu un transakciju — izsauc no GUI.
+     */
+    public void addCopies(int bookId, int count, Lietotajs actor) throws SQLException {
+        requireStaff(actor);
+        if (bookId <= 0) throw new IllegalArgumentException("Nederīgs grāmatas ID.");
+        if (count < 1 || count > 100)
+            throw new IllegalArgumentException("Eksemplāru skaitam jābūt no 1 līdz 100.");
+        withConnection(c -> {
+            c.setAutoCommit(false);
+            try {
+                new EksemplarsDAO(c).addCopiesInTransaction(bookId, count);
+                c.commit();
+            } catch (SQLException | RuntimeException ex) {
+                c.rollback();
+                throw ex;
+            } finally {
+                c.setAutoCommit(true);
+            }
+            return null;
+        });
+    }
+
+    /** Iekšējā versija — izmanto jau atvērtu savienojumu/transakciju. */
+    void addCopiesInTransaction(int bookId, int count) throws SQLException {
+        if (connection == null)
+            throw new SQLException("Iekšējai metodei nepieciešams savienojums.");
+        for (int i = 0; i < count; i++) {
+            Gramata g = new Gramata();
+            g.setGramatasId(bookId);
+            Eksemplars copy = new Eksemplars();
+            copy.setGramata(g);
+            copy.setBiblioteka(DEFAULT_LIBRARY);
+            copy.setStatus("pieejams");
+            insert(copy);
+        }
+        refreshAvailability(bookId);
+    }
+
+    /**
+     * Noņem visus grāmatai pieejamos eksemplārus. Eksemplāri, kas šobrīd izsniegti
+     * vai rezervēti, netiek aiztikti.
+     */
+    public void removeAvailableCopies(int bookId, Lietotajs actor) throws SQLException {
+        requireStaff(actor);
+        if (bookId <= 0) throw new IllegalArgumentException("Nederīgs grāmatas ID.");
+        withConnection(c -> {
+            c.setAutoCommit(false);
+            try {
+                new EksemplarsDAO(c).removeAvailableCopiesInTransaction(bookId);
+                c.commit();
+            } catch (SQLException | RuntimeException ex) {
+                c.rollback();
+                throw ex;
+            } finally {
+                c.setAutoCommit(true);
+            }
+            return null;
+        });
+    }
+
+    /** Iekšējā versija — izmanto jau atvērtu savienojumu/transakciju. */
+    void removeAvailableCopiesInTransaction(int bookId) throws SQLException {
+        if (connection == null)
+            throw new SQLException("Iekšējai metodei nepieciešams savienojums.");
+        try (PreparedStatement ps = connection.prepareStatement(
+                "DELETE FROM eksemplars WHERE gramatas_id = ? AND status = 'pieejams'")) {
+            ps.setInt(1, bookId);
+            try {
+                ps.executeUpdate();
+            } catch (SQLException ex) {
+                if ("23503".equals(ex.getSQLState())) {
+                    throw new SQLException(
+                        "Dažiem pieejamiem eksemplāriem ir izsniegumu vēsture — tos nevar izdzēst, "
+                        + "tāpēc grāmatu nevar padarīt nepieejamu. Sazinieties ar administratoru.", ex);
+                }
+                throw ex;
+            }
+        }
+        refreshAvailability(bookId);
     }
 
     /** Idempotenti izveido demonstrācijas datus šīs DAO atbildības tabulā. */

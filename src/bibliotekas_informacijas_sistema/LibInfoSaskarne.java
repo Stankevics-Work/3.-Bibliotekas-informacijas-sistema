@@ -2748,7 +2748,7 @@ private void showError(Throwable ex) {
             BookAvailabilityCheckBox.setSelected(book.isPieejama());
             originalBookYear = book.getIzdosanasGads();
             bookYearEdited = false;
-            BookAvailabilityCheckBox.setEnabled(false);
+            BookAvailabilityCheckBox.setEnabled(true);
             BookAvailabilityCheckBox.setToolTipText("Pieejamība tiek aprēķināta pēc eksemplāru statusa.");
             BookEditDialog.setTitle("LibInfo - Rediģēt grāmatu");
             showDialog(BookEditDialog);
@@ -2757,10 +2757,12 @@ private void showError(Throwable ex) {
 
     private void SaveBookButtonActionPerformed(java.awt.event.ActionEvent evt) {
         if (!isStaff()) return;
+
         try {
             boolean yearWasEdited = bookYearEdited;
             BookYearSpinner.commitEdit();
             Object yearValue = BookYearSpinner.getValue();
+            
             Gramata book = new Gramata();
             book.setNosaukums(BookNameTextField.getText().trim());
             book.setAutors(String.valueOf(BookAuthorTextField.getEditor().getItem()).trim());
@@ -2770,22 +2772,60 @@ private void showError(Throwable ex) {
             if (yearValue instanceof Number && (editingBookId < 0 || originalBookYear != null || yearWasEdited)) {
                 book.setIzdosanasGads(((Number) yearValue).intValue());
             }
+
+            boolean wantAvailable = BookAvailabilityCheckBox.isSelected();
             int copies = 0;
-            if (editingBookId < 0 && BookAvailabilityCheckBox.isSelected()) {
-                javax.swing.JSpinner count = new javax.swing.JSpinner(new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
-                int choice = JOptionPane.showConfirmDialog(BookEditDialog, count,
-                        "Cik eksemplārus pievienot? (1–100)", JOptionPane.OK_CANCEL_OPTION);
+
+            // Noskaidrojam, vai grāmata IE PRIEKŠ bija pieejama
+            boolean wasAvailable = false;
+            if (editingBookId > 0) {
+                Gramata original = gramataDAO.findBookById(editingBookId, currentUser);
+                if (original != null) {
+                    wasAvailable = original.isPieejama();
+                }
+            }
+
+            // Ja tā ir jauna grāmata UN tā tiek veidota kā pieejama
+            // VAI arī tā ir esoša grāmata, kas IE PRIEKŠ nebija pieejama, bet TAGAD tiek atzīmēta kā pieejama
+            boolean needCopies = (editingBookId < 0 && wantAvailable)
+                              || (editingBookId > 0 && wantAvailable && !wasAvailable);
+
+            if (needCopies) {
+                javax.swing.JSpinner count = new javax.swing.JSpinner(
+                        new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
+                javax.swing.JPanel panel = new javax.swing.JPanel(
+                        new java.awt.BorderLayout(4, 4));
+                panel.add(new javax.swing.JLabel("Cik eksemplārus pievienot, lai padarītu grāmatu pieejamu?"),
+                          java.awt.BorderLayout.NORTH);
+                panel.add(count, java.awt.BorderLayout.CENTER);
+
+                int choice = JOptionPane.showConfirmDialog(
+                        BookEditDialog, panel, "Eksemplāru skaits",
+                        JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
                 if (choice != JOptionPane.OK_OPTION) return;
-                count.commitEdit();
+
+                try {
+                    count.commitEdit();
+                } catch (java.text.ParseException ex) {
+                    showError(new IllegalArgumentException("Nederīgs eksemplāru skaits."));
+                    return;
+                }
                 copies = ((Number) count.getValue()).intValue();
             }
-            gramataDAO.saveBook(book, editingBookId, BookAvailabilityCheckBox.isSelected(), copies, currentUser);
-            JOptionPane.showMessageDialog(BookEditDialog, "Grāmatas dati saglabāti.", "LibInfo", JOptionPane.INFORMATION_MESSAGE);
+
+            // Saglabājam datubāzē. Metode pati izsauks remove/add un refreshAvailability
+            gramataDAO.saveBook(book, editingBookId, wantAvailable, copies, currentUser);
+
+            JOptionPane.showMessageDialog(BookEditDialog, "Grāmatas dati saglabāti.",
+                    "LibInfo", JOptionPane.INFORMATION_MESSAGE);
             BookEditDialog.setVisible(false);
             clearDialogFields(BookEditDialog);
             showDialog(BookListDialog);
             loadBooksFromUi();
-        } catch (Exception ex) { showError(ex); }
+
+        } catch (Exception ex) {
+            showError(ex);
+        }
     }
 
     private void DeleteButtonActionPerformed(java.awt.event.ActionEvent evt) {
